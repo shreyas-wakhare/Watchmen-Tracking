@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- DWEX Branding -->
+    <string name="app_name">DWEX Tracker</string>
+    <string name="dwex_logo">DWEX Logo</string>
+    <string name="company_name">DWEX</string>
+    <string name="tagline">Dewatering Experts</string>
+    <string name="settings">Settings</string>
+    <string name="powered_by">Powered by DWEX</string>
+
+    <string name="logo_transition_name">logoTransition</string>
+    <!-- Main Activity -->
+    <string name="app_title">🛰️ Watchmen Tracker</string>
+    <string name="status_initializing">Initializing…</string>
+    <string name="quick_actions">Quick Actions</string>
+    <string name="btn_check_in">📸 Manual Check-In</string>
+    <string name="btn_scan_checkpoint">📍 Scan Checkpoint QR</string>
+    <string name="btn_incident_report">📝 Report Incident</string>
+    <string name="emergency">Emergency</string>
+    <string name="btn_panic">🚨 PANIC (HOLD 2s)</string>
+    <string name="panic_instruction">⚠️ Hold PANIC button for 2 seconds to activate emergency alert</string>
+
+    <!-- Setup Activity -->
+    <string name="setup_title">Device Setup</string>
+    <string name="select_language">Select Language</string>
+    <string name="device_name">Device Name</string>
+    <string name="supervisor_phone">Supervisor Phone</string>
+    <string name="project_number">Project Number</string>
+    <string name="save_setup">Save and Continue</string>
+
+    <!-- Voice Announcements -->
+    <string name="check_in_announcement">Opening camera for check in</string>
+    <string name="panic_warning">Warning! You are about to send an emergency alert</string>
+    <string name="panic_sent">Emergency alert has been sent to your supervisor</string>
+    <string name="all_permissions_granted">All permissions granted. Tracking is now active</string>
+    <string name="hourly_checkin_reminder">Time for hourly check in. Please take a photo</string>
+    <!-- Camera / Liveness -->
+    <string name="verifying">Verifying…</string>
+    <string name="capture">Capture</string>
+    <string name="override">Override</string>
+    <string name="blink_instruction">Please blink</string>
+    <string name="override_prompt">Supervisor override enabled</string>
+
+    <!-- QR -->
+    <string name="qr_coming_soon">QR Scanner coming soon</string>
+
+    <!-- Setup -->
+    <string name="setup_subtitle">Please configure this device</string>
+
+    <!-- Incident -->
+
+
+    <!-- Panic -->
+    <string name="tap_send_sms">Tap SEND to alert supervisor</string>
+    <string name="permissions_granted_starting_service">✅ Permissions granted. Starting service…</string>
+    <string name="permissions_denied">❌ Permissions denied: %1$s</string>
+    <string name="state">State: %1$s</string>
+    <string name="checking_permissions">🔎 Checking permissions…</string>
+    <string name="waiting_for_permissions">⚠️ Waiting for permissions...</string>
+    <string name="tracking_active_service_will_not_stop">🛰️ Tracking active - SERVICE WILL NOT STOP</string>
+    <string name="service_failed_to_start">❌ Service failed to start</string>
+
+    <!-- Incident Report -->
+    <string name="incident_type">Incident Type</string>
+    <string name="incident_description">Description</string>
+    <string name="incident_description_hint">Describe the incident in detail...</string>
+
+    <string name="incident_photo_optional">Photo Evidence (Optional)</string>
+    <string name="incident_photo_content_desc">Incident photo</string>
+
+    <string name="capture_photo">📷 Capture Photo</string>
+    <string name="submit_report">📤 Submit Report</string>
+    <string name="loading">Loading…</string>
+
+    <string name="incident_description_required">Description is required</string>
+    <string name="incident_report_success">Incident reported successfully</string>
+    <string name="incident_saved_offline">Saved offline. Will sync when online</string>
+    <string name="liveness_turn_head">Turn your head left then right</string>
+    <string name="liveness_blink">Please blink</string>
+    <string name="liveness_move_closer">Move slightly closer</string>
+    <string name="liveness_verified">Face verified</string>
+    <string name="liveness_no_face">Align your face in the frame</string>
+    <string name="liveness_eyes_closed">Open your eyes</string>
+    <string name="liveness_tracking_weak">Tracking weak or face too small</string>
+    <string name="liveness_hold_steady">Hold steady</string>
+    <string name="liveness_motion_required">Move slightly (shift head or body)</string>
+    <string name="liveness_blink_too_long">Please blink quickly</string>
+    <string name="liveness_head_passive">Head movement OK (passive)</string>
+    <string name="liveness_head_ok">Head movement OK</string>
+    <string name="liveness_motion_ok">Motion OK</string>
+    <string name="liveness_building_motion">Building motion...</string>
+    <string name="liveness_eyes_open">Eyes open</string>
+    <string name="liveness_waiting_blink">Waiting for blink</string>
+    <string name="liveness_tracking_ok">Tracking OK</string>
+    <string name="liveness_too_small">Move slightly closer (face too small)</string>
+    <string name="liveness_analysis_error">Analysis error</string>
+    <string name="liveness_no_face_error">No face detected (face too small or not centered)</string>
+    <string name="liveness_low_light">Increase lighting or face the light source</string>
+
+    <string name="liveness_trial_prompt">Trial %1$d of %2$d.</string>
+    <string name="liveness_final_try_prompt">Final attempt. Please follow instructions carefully.</string>
+    <string name="liveness_failed_trial_report">A failed attempt (%1$d/%2$d) has been registered and sent to your supervisor.</string>
+
+    <string name="button_capture_anyway">Capture Anyway</string>
+    <string name="button_verifying">Verifying…</string>
+    <string name="button_capture">Capture</string>
+    <string name="button_override">Override</string>
+    <string name="force_capture_enabled">Forced capture enabled.</string>
+    <string name="button_confirm">Confirm</string>
+    <string name="button_cancel">Cancel</string>
+    <string name="hint_verification_failed">Verification failed. Tap \'Override\' if needed.</string>
+    <string name="hint_force_capture">Verification failed 3 times. Tap \'Capture Anyway\' to proceed.</string>
+    <string name="hourly_checkin_mode">Hourly Check-In: Look at the camera</string>
+    <string name="hourly_checkin_label">📸 Hourly Check-In</string>
+    <string name="hourly_capturing_soon">Capturing in 2 seconds…</string>
+    <string name="button_auto_capturing">Auto-capturing…</string>
+    <string name="movement_fake_steps_shake">Unusual shaking detected. Please carry the phone normally.</string>
+    <string name="movement_fake_steps_ground">Phone seems stationary on a surface. Please keep it with you while walking.</string>
+    <string name="movement_fake_steps_vibration">Unnatural vibration detected. Please stop using mechanical devices with the phone.</string>
+    <!-- ===== Settings Menu Options ===== -->
+    <string name="change_language">🌐 Change Language</string>
+    <string name="device_info">📱 Device Information</string>
+    <string name="report_bug_title">🐞 Report a Bug</string>
+    <string name="edit_setup">⚙️ Edit Setup</string>
+    <string name="close">❌ Close</string>
+
+    <!-- ===== Bug Report ===== -->
+    <string name="report_bug_message">
+If something is not working correctly, please describe the problem below.
+This will help us improve the system.
+</string>
+
+    <string name="bug_description_hint">Describe the issue clearly...</string>
+    <string name="bug_empty">Bug description cannot be empty</string>
+    <string name="bug_sent">✅ Bug report sent successfully. Thank you.</string>
+    <string name="bug_failed">❌ Failed to send bug report. Please try again later.</string>
+    <string name="submit">Submit</string>
+    <string name="cancel">Cancel</string>
+
+
+
+
+
+    <string name="guide_intro_title">Welcome to Watchmen Tracker</string>
+    <string name="guide_intro_body">
+This application is designed to support watchmen during their shifts by ensuring safety, accountability, and smooth operations.
+
+It helps verify presence, track shift activity, enable rapid assistance, and maintain clear communication with the control center.
+
+The system is built to protect both the watchman and the organization by ensuring accurate and fair reporting.
+    </string>
+
+    <string name="guide_integrity_title">Fair and Responsible Use</string>
+    <string name="guide_integrity_body">
+This system uses multiple verification methods to ensure accurate reporting during your shift.
+
+Any attempts to manipulate location, movement, device behavior, or system signals may be automatically detected and reported to the control center.
+
+The application is intended to assist you in completing your duties smoothly and should not be abused, spoofed, or tampered with.
+    </string>
+
+    <string name="guide_hourly_title">Hourly Check-In</string>
+    <string name="guide_hourly_body">
+During your shift, the application requires regular hourly check-ins to confirm your presence and activity.
+
+You will be prompted to complete a check-in when required. These check-ins help ensure accurate attendance records and uninterrupted shift monitoring.
+    </string>
+
+    <string name="guide_missed_checkin_title">Missed Hourly Check-Ins</string>
+    <string name="guide_missed_checkin_body">
+If an hourly check-in is missed, the system will record the event and notify the control center.
+
+If a check-in is missed due to a valid reason, continue your duties normally and report the situation if required.
+
+Repeated or unexplained missed check-ins may be reviewed by supervision.
+    </string>
+
+    <string name="guide_incident_title">Incident Reporting</string>
+    <string name="guide_incident_body">
+Incident reporting allows you to document any unusual, unsafe, or important events during your shift.
+
+If the appropriate incident type is not available in the list, select any option and clearly describe the situation in your own words.
+
+Accurate incident reporting protects you and helps ensure proper action is taken.
+    </string>
+
+    <string name="guide_panic_title">Panic Button Usage</string>
+    <string name="guide_panic_body">
+The panic button is intended for genuine emergency situations where immediate assistance is required.
+
+When activated, the system sends an urgent alert to the control center, shares your current location, and notifies your supervisor.
+
+After activation, remain at your location and follow any instructions provided.
+    </string>
+
+    <string name="guide_panic_responsibility_title">Responsible Use of Panic Alerts</string>
+    <string name="guide_panic_responsibility_body">
+Panic alerts must only be used in legitimate emergency situations.
+
+If a panic alert is triggered without a justified reason, the incident will be reviewed and appropriate administrative action may be taken in accordance with company policy.
+    </string>
+
+    <string name="guide_device_title">Device and Shift Requirements</string>
+    <string name="guide_device_body">
+During your shift, the device must remain powered on and the application must stay installed and active.
+
+The application should not be force-closed, cleared, cached, or uninstalled. Installing additional applications or modifying device settings is not permitted.
+
+Volume should remain at the highest level to ensure important announcements are heard. Device status, battery behavior, and usage outside the application may be monitored.
+
+At the start of your shift, ensure the device is fully charged. Sudden or unusual battery drops may be reported.
+    </string>
+
+    <string name="guide_announcements_title">Announcements and Audio Alerts</string>
+    <string name="guide_announcements_body">
+You may receive announcements from the control center during your shift.
+
+These announcements will be read aloud and may also appear as on-screen messages.
+
+If the audio is unclear or missed, a written notification will be displayed. Please give full attention to all announcements, as they are specifically intended for you.
+    </string>
+
+    <string name="guide_acknowledge">I have read and understood the app usage guidelines</string>
+    <string name="guide_title">Application Guide</string>
+    <string name="guide_button_label">App Guide</string>
+    <string name="guide_swipe_hint">Swipe left or right to continue →</string>
+
+</resources>

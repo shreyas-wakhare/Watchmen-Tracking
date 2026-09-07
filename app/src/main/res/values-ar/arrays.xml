@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="incident_types">
+        <item>نشاط مشبوه</item>
+        <item>عطل في المعدات</item>
+        <item>مخاطر السلامة</item>
+        <item>دخول غير مصرح به</item>
+        <item>حالة طبية طارئة</item>
+        <item>حريق / دخان</item>
+        <item>سرقة / تخريب</item>
+        <item>أخرى</item>
+    </string-array>
+</resources>

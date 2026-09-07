@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">متتبع الحراس</string>
+
+    <!-- Main Activity -->
+    <string name="app_title">🛰️ متتبع الحراس</string>
+    <string name="status_initializing">جاري التهيئة…</string>
+    <string name="quick_actions">إجراءات سريعة</string>
+    <string name="btn_check_in">📸 تسجيل دخول يدوي</string>
+    <string name="btn_scan_checkpoint">📍 مسح QR نقطة التفتيش</string>
+    <string name="btn_incident_report">📝 الإبلاغ عن حادث</string>
+    <string name="emergency">طوارئ</string>
+    <string name="btn_panic">🚨 الذعر (اضغط لمدة ثانيتين)</string>
+    <string name="panic_instruction">⚠️ اضغط على زر الذعر لمدة ثانيتين لتفعيل تنبيه الطوارئ</string>
+
+    <!-- Setup Activity -->
+    <string name="setup_title">إعداد الجهاز</string>
+    <string name="select_language">اختر اللغة</string>
+    <string name="device_name">اسم الجهاز</string>
+    <string name="supervisor_phone">هاتف المشرف</string>
+    <string name="project_number">رقم المشروع</string>
+    <string name="save_setup">حفظ والمتابعة</string>
+
+    <!-- Voice Announcements -->
+    <string name="check_in_announcement">فتح الكاميرا لتسجيل الدخول</string>
+    <string name="panic_warning">تحذير! أنت على وشك إرسال تنبيه طوارئ</string>
+    <string name="panic_sent">تم إرسال تنبيه الطوارئ إلى المشرف الخاص بك</string>
+    <string name="all_permissions_granted">تم منح جميع الأذونات. التتبع نشط الآن</string>
+    <string name="hourly_checkin_reminder">حان وقت تسجيل الدخول كل ساعة. يرجى التقاط صورة</string>
+    <string name="verifying">جارٍ التحقق…</string>
+    <string name="capture">التقاط</string>
+    <string name="override">تجاوز</string>
+    <string name="blink_instruction">يرجى الرمش</string>
+    <string name="override_prompt">تم تفعيل تجاوز المشرف</string>
+
+    <string name="qr_coming_soon">ماسح QR قريبًا</string>
+
+    <string name="setup_subtitle">يرجى إعداد هذا الجهاز</string>
+
+
+
+    <string name="tap_send_sms">اضغط إرسال لتنبيه المشرف</string>
+    <string name="checking_permissions">جاري التحقق من الأذونات…</string>
+
+    <string name="permissions_granted_starting_service">
+    تم منح جميع الأذونات. جاري تشغيل خدمة التتبع…
+</string>
+
+    <string name="permissions_denied">
+    تم رفض الأذونات: %1$s
+</string>
+
+    <string name="waiting_for_permissions">
+    في انتظار الأذونات المطلوبة…
+</string>
+
+    <string name="state">الحالة: %1$s</string>
+
+    <string name="tracking_active_service_will_not_stop">
+    التتبع نشط. ستستمر الخدمة في العمل في الخلفية.
+</string>
+
+    <string name="service_failed_to_start">
+    فشل تشغيل خدمة التتبع
+</string>
+    <!-- Incident Report -->
+    <string name="incident_type">نوع الحادث</string>
+    <string name="incident_description">الوصف</string>
+    <string name="incident_description_hint">يرجى وصف الحادث بالتفصيل...</string>
+
+    <string name="incident_photo_optional">صورة توضيحية (اختياري)</string>
+    <string name="incident_photo_content_desc">صورة الحادث</string>
+    <string name="dwex_logo">شعار DWEX</string>
+    <string name="company_name">DWEX</string>
+    <string name="tagline">خبراء نزح المياه</string>
+    <string name="settings">الإعدادات</string>
+    <string name="powered_by">مدعوم من DWEX</string>
+    <string name="logo_transition_name">logoTransition</string>
+    <string name="capture_photo">📷 التقاط صورة</string>
+    <string name="submit_report">📤 إرسال التقرير</string>
+    <string name="loading">جاري التحميل…</string>
+
+    <string name="incident_description_required">الوصف مطلوب</string>
+    <string name="incident_report_success">تم إرسال تقرير الحادث بنجاح</string>
+    <string name="incident_saved_offline">تم الحفظ بدون اتصال. سيتم الإرسال عند توفر الإنترنت</string>
+    <string name="liveness_turn_head">حرّك رأسك لليسار ثم اليمين</string>
+    <string name="liveness_blink">من فضلك اغمض عينيك</string>
+    <string name="liveness_move_closer">اقترب قليلاً</string>
+    <string name="liveness_verified">تم التحقق من الوجه</string>
+    <string name="liveness_no_face">وجّه وجهك داخل الإطار</string>
+    <string name="liveness_eyes_closed">افتح عينيك</string>
+    <string name="liveness_tracking_weak">التتبع ضعيف أو الوجه صغير جداً</string>
+    <string name="liveness_hold_steady">حافظ على ثباتك</string>
+    <string name="liveness_motion_required">تحرّك قليلاً (حرّك الرأس أو الجسم)</string>
+    <string name="liveness_blink_too_long">من فضلك اغمض عينيك بسرعة</string>
+    <string name="liveness_head_passive">حركة الرأس جيدة (غير إلزامية)</string>
+    <string name="liveness_head_ok">حركة الرأس جيدة</string>
+    <string name="liveness_motion_ok">الحركة جيدة</string>
+    <string name="liveness_building_motion">جارٍ بناء الحركة...</string>
+    <string name="liveness_eyes_open">العينان مفتوحتان</string>
+    <string name="liveness_waiting_blink">في انتظار غمضة العين</string>
+    <string name="liveness_tracking_ok">التتبع جيد</string>
+    <string name="liveness_too_small">اقترب قليلاً (الوجه صغير جداً)</string>
+    <string name="liveness_analysis_error">خطأ في التحليل</string>
+    <string name="liveness_no_face_error">لم يتم الكشف عن وجه (صغير جداً أو غير مُتمركز)</string>
+    <string name="liveness_low_light">قم بزيادة الإضاءة أو واجه مصدر الضوء</string>
+
+    <string name="liveness_trial_prompt">المحاولة %1$d من %2$d.</string>
+    <string name="liveness_final_try_prompt">المحاولة الأخيرة. يرجى اتباع التعليمات بعناية.</string>
+    <string name="liveness_failed_trial_report">تم تسجيل محاولة فاشلة (%1$d/%2$d) وإرسالها إلى المشرف الخاص بك.</string>
+
+    <string name="button_capture_anyway">التقاط على أي حال</string>
+    <string name="button_verifying">جارٍ التحقق…</string>
+    <string name="button_capture">التقاط</string>
+    <string name="button_override">تجاوز</string>
+    <string name="force_capture_enabled">تم تمكين الالتقاط الإجباري.</string>
+    <string name="button_confirm">تأكيد</string>
+    <string name="button_cancel">إلغاء</string>
+    <string name="hint_verification_failed">فشل التحقق. انقر على \'تجاوز\' إذا لزم الأمر.</string>
+    <string name="hint_force_capture">فشل التحقق 3 مرات. انقر على \'التقاط على أي حال\' للمتابعة.</string>
+    <string name="hourly_checkin_mode">تسجيل ساعي: انظر إلى الكاميرا</string>
+    <string name="hourly_checkin_label">📸 تسجيل ساعي</string>
+    <string name="hourly_capturing_soon">التصوير خلال ثانيتين...</string>
+    <string name="button_auto_capturing">التصوير التلقائي...</string>
+    <string name="movement_fake_steps_shake">
+    تم اكتشاف اهتزاز غير طبيعي. يُرجى حمل الهاتف بشكل طبيعي.
+</string>
+
+    <string name="movement_fake_steps_ground">
+    يبدو أن الهاتف ثابت على سطح ما. يُرجى إبقاء الهاتف معك أثناء المشي.
+</string>
+
+    <string name="movement_fake_steps_vibration">
+    تم اكتشاف اهتزاز غير طبيعي. يُرجى التوقف عن استخدام أي أجهزة ميكانيكية مع الهاتف.
+</string>
+    <string name="change_language">🌐 تغيير اللغة</string>
+    <string name="device_info">📱 معلومات الجهاز</string>
+    <string name="report_bug_title">🐞 الإبلاغ عن خلل</string>
+    <string name="edit_setup">⚙️ تعديل الإعدادات</string>
+    <string name="close">❌ إغلاق</string>
+
+    <!-- ===== الإبلاغ عن خلل ===== -->
+    <string name="report_bug_message">
+إذا كان هناك شيء لا يعمل بشكل صحيح، يرجى وصف المشكلة أدناه.
+سيساعدنا ذلك على تحسين النظام.
+</string>
+
+    <string name="bug_description_hint">يرجى وصف المشكلة بوضوح...</string>
+    <string name="bug_empty">لا يمكن ترك وصف المشكلة فارغًا</string>
+    <string name="bug_sent">✅ تم إرسال البلاغ بنجاح. شكرًا لك.</string>
+    <string name="bug_failed">❌ فشل إرسال البلاغ. يرجى المحاولة لاحقًا.</string>
+    <!-- ===== أزرار عامة ===== -->
+    <string name="submit">إرسال</string>
+    <string name="cancel">إلغاء</string>
+
+
+
+
+
+
+
+
+    <string name="guide_intro_title">مرحباً بك في نظام تتبع الحراس</string>
+    <string name="guide_intro_body">
+تم تصميم هذا التطبيق لدعم الحراس أثناء نوبات العمل من خلال ضمان السلامة والمساءلة وسلاسة العمليات.
+
+يساعد النظام على التحقق من التواجد، متابعة النشاط، تمكين المساعدة السريعة، والحفاظ على التواصل مع مركز التحكم.
+
+تم إنشاء هذا النظام لحماية الحارس والمؤسسة من خلال ضمان تقارير دقيقة وعادلة.
+    </string>
+
+    <string name="guide_integrity_title">الاستخدام العادل والمسؤول</string>
+    <string name="guide_integrity_body">
+يستخدم هذا النظام عدة وسائل تحقق لضمان دقة البيانات أثناء نوبة العمل.
+
+أي محاولة للتلاعب بالموقع أو الحركة أو سلوك الجهاز أو إشارات النظام قد يتم اكتشافها تلقائياً وإبلاغ مركز التحكم بها.
+
+تم تصميم التطبيق لدعم أداء المهام بسلاسة ولا يجب إساءة استخدامه أو التحايل عليه أو العبث به.
+    </string>
+
+    <string name="guide_hourly_title">التسجيل الدوري كل ساعة</string>
+    <string name="guide_hourly_body">
+يتطلب التطبيق تسجيل حضور منتظم كل ساعة خلال نوبة العمل لتأكيد التواجد والنشاط.
+
+سيتم تنبيهك عند الحاجة لإجراء تسجيل الحضور. يساعد ذلك في ضمان دقة سجلات الدوام واستمرارية المراقبة.
+    </string>
+
+    <string name="guide_missed_checkin_title">تفويت تسجيل الحضور</string>
+    <string name="guide_missed_checkin_body">
+في حال تفويت تسجيل الحضور الدوري، سيتم تسجيل الحدث وإبلاغ مركز التحكم.
+
+إذا تم تفويت التسجيل لسبب مشروع، استمر في أداء مهامك وقم بالإبلاغ عند الحاجة.
+
+قد تخضع حالات التفويت المتكررة أو غير المبررة للمراجعة الإدارية.
+    </string>
+
+    <string name="guide_incident_title">الإبلاغ عن الحوادث</string>
+    <string name="guide_incident_body">
+يتيح لك الإبلاغ عن الحوادث توثيق أي موقف غير معتاد أو غير آمن أو مهم أثناء نوبة العمل.
+
+إذا لم يكن نوع الحادث متوفراً في القائمة، اختر أي خيار وقم بوصف الحالة بوضوح.
+
+تساعد التقارير الدقيقة في حمايتك وضمان اتخاذ الإجراءات المناسبة.
+    </string>
+
+    <string name="guide_panic_title">استخدام زر الطوارئ</string>
+    <string name="guide_panic_body">
+زر الطوارئ مخصص فقط للحالات الطارئة الحقيقية التي تتطلب مساعدة فورية.
+
+عند التفعيل، يتم إرسال تنبيه عاجل إلى مركز التحكم، مشاركة موقعك، وإشعار المشرف.
+
+بعد التفعيل، يُرجى البقاء في موقعك واتباع التعليمات الصادرة.
+    </string>
+
+    <string name="guide_panic_responsibility_title">المسؤولية عند استخدام زر الطوارئ</string>
+    <string name="guide_panic_responsibility_body">
+يجب استخدام تنبيهات الطوارئ فقط في الحالات المبررة.
+
+في حال استخدام زر الطوارئ دون سبب مشروع، سيتم مراجعة الحالة وقد تُتخذ إجراءات إدارية وفقاً لسياسة الشركة.
+    </string>
+
+    <string name="guide_device_title">متطلبات الجهاز ونوبة العمل</string>
+    <string name="guide_device_body">
+يجب أن يبقى الجهاز قيد التشغيل وأن يظل التطبيق مثبتاً ونشطاً طوال نوبة العمل.
+
+لا يجوز إيقاف التطبيق أو مسح بياناته أو إلغاء تثبيته. كما لا يُسمح بتثبيت تطبيقات أخرى أو تعديل إعدادات الجهاز.
+
+يجب ضبط مستوى الصوت على أعلى درجة لضمان سماع الإعلانات الهامة. قد تتم مراقبة حالة الجهاز والبطارية والاستخدام.
+
+يجب شحن الجهاز بالكامل قبل بدء النوبة. قد يتم الإبلاغ عن أي انخفاض مفاجئ أو غير طبيعي في مستوى البطارية.
+    </string>
+
+    <string name="guide_announcements_title">الإعلانات والتنبيهات الصوتية</string>
+    <string name="guide_announcements_body">
+قد تتلقى إعلانات من مركز التحكم أثناء نوبة العمل.
+
+سيتم تشغيل هذه الإعلانات صوتياً وقد تظهر أيضاً على الشاشة.
+
+في حال عدم وضوح الصوت، سيتم عرض إشعار نصي. يرجى الانتباه إلى جميع الإعلانات.
+    </string>
+
+    <string name="guide_acknowledge">أقر بأنني قرأت وفهمت إرشادات استخدام التطبيق</string>
+
+
+    <string name="guide_title">دليل التطبيق</string>
+    <string name="guide_button_label">دليل التطبيق</string>
+    <string name="guide_swipe_hint">للمتابعة، اسحب يمينًا أو يسارًا →</string>
+
+</resources>

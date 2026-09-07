@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- App -->
+    <string name="app_name">واچمین ٹریکر</string>
+    <string name="app_title">🛰️ واچمین ٹریکر</string>
+
+    <!-- General Status -->
+    <string name="status_initializing">شروع ہو رہا ہے…</string>
+    <string name="verifying">تصدیق ہو رہی ہے…</string>
+
+    <!-- Main Activity -->
+    <string name="quick_actions">فوری کارروائیاں</string>
+    <string name="btn_check_in">📸 دستی چیک ان</string>
+    <string name="btn_scan_checkpoint">📍 چیک پوائنٹ QR اسکین کریں</string>
+    <string name="btn_incident_report">📝 واقعہ کی رپورٹ کریں</string>
+
+    <!-- Emergency -->
+    <string name="emergency">ہنگامی صورتحال</string>
+    <string name="btn_panic">🚨 پینک (2 سیکنڈ دبائیں)</string>
+    <string name="panic_instruction">⚠️ ہنگامی الرٹ چالو کرنے کے لیے پینک بٹن کو 2 سیکنڈ تک دبائیں</string>
+    <string name="panic_warning">انتباہ! آپ ہنگامی الرٹ بھیجنے والے ہیں</string>
+    <string name="panic_sent">ہنگامی الرٹ آپ کے سپروائزر کو بھیج دیا گیا ہے</string>
+    <string name="tap_send_sms">سپروائزر کو الرٹ کرنے کے لیے بھیجیں دبائیں</string>
+
+    <!-- Camera / Liveness -->
+    <string name="capture">تصویر لیں</string>
+    <string name="override">تجاوز</string>
+    <string name="blink_instruction">براہِ کرم آنکھ جھپکائیں</string>
+    <string name="override_prompt">سپروائزر کا تجاوز فعال ہے</string>
+
+    <!-- QR -->
+    <string name="qr_coming_soon">QR اسکینر جلد آ رہا ہے</string>
+
+    <!-- Setup -->
+    <string name="setup_title">ڈیوائس سیٹ اپ</string>
+    <string name="setup_subtitle">براہِ کرم اس ڈیوائس کو ترتیب دیں</string>
+    <string name="select_language">زبان منتخب کریں</string>
+    <string name="device_name">ڈیوائس کا نام</string>
+    <string name="supervisor_phone">سپروائزر فون</string>
+    <string name="project_number">پروجیکٹ نمبر</string>
+    <string name="save_setup">محفوظ کریں اور جاری رکھیں</string>
+
+    <!-- Incident -->
+    <string name="loading">لوڈ ہو رہا ہے…</string>
+
+
+    <!-- Voice Announcements -->
+    <string name="check_in_announcement">چیک ان کے لیے کیمرہ کھولا جا رہا ہے</string>
+    <string name="all_permissions_granted">تمام اجازتیں دی جا چکی ہیں۔ ٹریکنگ فعال ہے</string>
+    <string name="hourly_checkin_reminder">گھنٹہ وار چیک ان کا وقت ہے۔ براہِ کرم تصویر لیں</string>
+    <string name="checking_permissions">اجازتوں کی جانچ ہو رہی ہے…</string>
+    <string name="dwex_logo">DWEX کا لوگو</string>
+    <string name="company_name">DWEX</string>
+    <string name="tagline">ڈی واٹرنگ کے ماہرین</string>
+    <string name="settings">ترتیبات</string>
+    <string name="powered_by">DWEX کے ذریعے فراہم کردہ</string>
+    <string name="logo_transition_name">logoTransition</string>
+    <string name="permissions_granted_starting_service">
+    تمام اجازتیں دے دی گئیں۔ ٹریکنگ سروس شروع ہو رہی ہے…
+</string>
+
+    <string name="permissions_denied">
+    اجازتیں مسترد ہو گئیں: %1$s
+</string>
+
+    <string name="waiting_for_permissions">
+    مطلوبہ اجازتوں کا انتظار…
+</string>
+
+    <string name="state">حالت: %1$s</string>
+
+    <string name="tracking_active_service_will_not_stop">
+    ٹریکنگ فعال ہے۔ سروس پس منظر میں جاری رہے گی۔
+</string>
+
+    <string name="service_failed_to_start">
+    ٹریکنگ سروس شروع کرنے میں ناکامی
+</string>
+    <!-- Incident Report -->
+    <string name="incident_type">واقعے کی قسم</string>
+    <string name="incident_description">تفصیل</string>
+    <string name="incident_description_hint">براہ کرم واقعے کی مکمل تفصیل درج کریں...</string>
+
+    <string name="incident_photo_optional">تصویری ثبوت (اختیاری)</string>
+    <string name="incident_photo_content_desc">واقعے کی تصویر</string>
+
+    <string name="capture_photo">📷 تصویر لیں</string>
+    <string name="submit_report">📤 رپورٹ جمع کروائیں</string>
+
+    <string name="incident_description_required">تفصیل درج کرنا ضروری ہے</string>
+    <string name="incident_report_success">واقعے کی رپورٹ کامیابی سے بھیج دی گئی</string>
+    <string name="incident_saved_offline">انٹرنیٹ دستیاب نہیں۔ رپورٹ محفوظ کر لی گئی ہے</string>
+    <string name="liveness_turn_head">اپنا سر بائیں پھر دائیں گھمائیں</string>
+    <string name="liveness_blink">براہ کرم پلک جھپکائیں</string>
+    <string name="liveness_move_closer">تھوڑا قریب آ جائیں</string>
+    <string name="liveness_verified">چہرہ کی تصدیق ہو گئی</string>
+    <string name="liveness_no_face">اپنا چہرہ فریم میں سیدھا کریں</string>
+    <string name="liveness_eyes_closed">اپنی آنکھیں کھولیں</string>
+    <string name="liveness_tracking_weak">ٹریکنگ کمزور ہے یا چہرہ بہت چھوٹا ہے</string>
+    <string name="liveness_hold_steady">مستحکم رہیں</string>
+    <string name="liveness_motion_required">تھوڑا سا حرکت کریں (سر یا جسم کو ہلائیں)</string>
+    <string name="liveness_blink_too_long">براہ کرم تیزی سے پلک جھپکائیں</string>
+    <string name="liveness_head_passive">سر کی حرکت ٹھیک ہے (غیر فعال)</string>
+    <string name="liveness_head_ok">سر کی حرکت ٹھیک ہے</string>
+    <string name="liveness_motion_ok">حرکت ٹھیک ہے</string>
+    <string name="liveness_building_motion">حرکت بنائی جا رہی ہے...</string>
+    <string name="liveness_eyes_open">آنکھیں کھلی ہیں</string>
+    <string name="liveness_waiting_blink">پلک جھپکنے کا انتظار ہے</string>
+    <string name="liveness_tracking_ok">ٹریکنگ ٹھیک ہے</string>
+    <string name="liveness_too_small">تھوڑا قریب آ جائیں (چہرہ بہت چھوٹا ہے)</string>
+    <string name="liveness_analysis_error">تجزیہ کی خرابی</string>
+    <string name="liveness_no_face_error">کوئی چہرہ نہیں ملا (چہرہ بہت چھوٹا یا مرکز میں نہیں ہے)</string>
+    <string name="liveness_low_light">روشنی بڑھائیں یا روشنی کے ماخذ کی طرف چہرہ کریں</string>
+
+    <string name="liveness_trial_prompt">کوشش %1$d میں سے %2$d۔</string>
+    <string name="liveness_final_try_prompt">آخری کوشش۔ براہ کرم ہدایات پر احتیاط سے عمل کریں۔</string>
+    <string name="liveness_failed_trial_report">ایک ناکام کوشش (%1$d/%2$d) رجسٹر کر کے آپ کے سپروائزر کو بھیج دی گئی ہے۔</string>
+
+    <string name="button_capture_anyway">بہر حال کیپچر کریں</string>
+    <string name="button_verifying">تصدیق ہو رہی ہے…</string>
+    <string name="button_capture">کیپچر کریں</string>
+    <string name="button_override">اوور رائڈ</string>
+    <string name="force_capture_enabled">جبری کیپچر فعال کر دیا گیا۔</string>
+    <string name="button_confirm">تصدیق کریں</string>
+    <string name="button_cancel">منسوخ کریں</string>
+    <string name="hint_verification_failed">تصدیق ناکام ہو گئی۔ اگر ضرورت ہو تو \'اوور رائڈ\' پر ٹیپ کریں۔</string>
+    <string name="hint_force_capture">تصدیق 3 بار ناکام ہو گئی۔ آگے بڑھنے کے لیے \'بہر حال کیپچر کریں\' پر ٹیپ کریں۔</string>
+    <string name="hourly_checkin_mode">گھنٹہ وار چیک ان: کیمرہ کی طرف دیکھیں</string>
+    <string name="hourly_checkin_label">📸 گھنٹہ وار چیک ان</string>
+    <string name="hourly_capturing_soon">2 سیکنڈ میں تصویر لی جائے گی...</string>
+    <string name="button_auto_capturing">خودکار تصویر...</string>
+    <string name="movement_fake_steps_shake">
+    غیر معمولی جھٹکے محسوس کیے گئے ہیں۔ براہِ کرم فون کو عام طریقے سے پکڑیں۔
+</string>
+
+    <string name="movement_fake_steps_ground">
+    فون کسی سطح پر ساکن معلوم ہو رہا ہے۔ براہِ کرم چلتے وقت فون اپنے ساتھ رکھیں۔
+</string>
+
+    <string name="movement_fake_steps_vibration">
+    غیر فطری کمپن محسوس کی گئی ہے۔ براہِ کرم فون کے ساتھ کسی مشینی آلے کا استعمال بند کریں۔
+</string>
+    <!-- ===== سیٹنگز کے اختیارات ===== -->
+    <string name="change_language">🌐 زبان تبدیل کریں</string>
+    <string name="device_info">📱 ڈیوائس کی معلومات</string>
+    <string name="report_bug_title">🐞 خرابی کی رپورٹ کریں</string>
+    <string name="edit_setup">⚙️ سیٹ اپ میں ترمیم کریں</string>
+    <string name="close">❌ بند کریں</string>
+
+    <!-- ===== خرابی کی رپورٹ ===== -->
+    <string name="report_bug_message">
+اگر ایپ میں کوئی مسئلہ ہو تو براہ کرم نیچے اس کی وضاحت کریں۔
+اس سے ہمیں سسٹم بہتر بنانے میں مدد ملے گی۔
+</string>
+
+    <string name="bug_description_hint">مسئلے کی واضح وضاحت کریں...</string>
+    <string name="bug_empty">خرابی کی وضاحت خالی نہیں ہو سکتی</string>
+    <string name="bug_sent">✅ خرابی کی رپورٹ کامیابی سے بھیج دی گئی۔ شکریہ۔</string>
+    <string name="bug_failed">❌ رپورٹ بھیجنے میں ناکامی۔ بعد میں دوبارہ کوشش کریں۔</string>
+    <string name="submit">جمع کریں</string>
+    <string name="cancel">منسوخ کریں</string>
+
+
+
+
+    <string name="guide_intro_title">واچ مین ٹریکر میں خوش آمدید</string>
+    <string name="guide_intro_body">
+یہ ایپلیکیشن واچ مین کے دورانِ ڈیوٹی تحفظ، ذمہ داری اور ہموار آپریشنز کو یقینی بنانے کے لیے تیار کی گئی ہے۔
+
+یہ حاضری کی تصدیق، سرگرمی کی نگرانی، فوری مدد اور کنٹرول سینٹر سے رابطے میں معاونت فراہم کرتی ہے۔
+
+یہ نظام واچ مین اور ادارے دونوں کے تحفظ کے لیے درست اور منصفانہ رپورٹنگ کو یقینی بناتا ہے۔
+    </string>
+
+    <string name="guide_integrity_title">ذمہ دار اور منصفانہ استعمال</string>
+    <string name="guide_integrity_body">
+یہ نظام دورانِ ڈیوٹی درست رپورٹنگ کو یقینی بنانے کے لیے متعدد تصدیقی طریقے استعمال کرتا ہے۔
+
+مقام، حرکت، ڈیوائس کے رویے یا سسٹم سگنلز میں کسی بھی قسم کی چھیڑ چھاڑ خودکار طور پر شناخت اور کنٹرول سینٹر کو رپورٹ کی جا سکتی ہے۔
+
+یہ ایپلیکیشن آپ کی ذمہ داریاں بہتر طریقے سے ادا کرنے میں مدد کے لیے بنائی گئی ہے اور اس کے غلط استعمال، دھوکہ دہی یا چھیڑ چھاڑ کی اجازت نہیں ہے۔
+    </string>
+
+    <string name="guide_hourly_title">ہر گھنٹے کی چیک اِن</string>
+    <string name="guide_hourly_body">
+ڈیوٹی کے دوران، ایپلیکیشن باقاعدہ ہر گھنٹے چیک اِن کا تقاضا کرتی ہے تاکہ آپ کی موجودگی اور سرگرمی کی تصدیق ہو سکے۔
+
+جب ضرورت ہو تو آپ کو چیک اِن مکمل کرنے کے لیے مطلع کیا جائے گا۔ یہ چیک اِن حاضری کے درست ریکارڈ کو یقینی بناتے ہیں۔
+    </string>
+
+    <string name="guide_missed_checkin_title">چیک اِن رہ جانے کی صورت</string>
+    <string name="guide_missed_checkin_body">
+اگر کوئی گھنٹہ وار چیک اِن مکمل نہ ہو سکے تو سسٹم اس کو ریکارڈ کر کے کنٹرول سینٹر کو مطلع کرے گا۔
+
+اگر کسی جائز وجہ کی بنا پر چیک اِن رہ جائے تو اپنی ذمہ داریاں جاری رکھیں اور ضرورت پڑنے پر رپورٹ کریں۔
+
+بار بار یا بلا جواز چیک اِن رہنے کی صورت میں سپروائزری جائزہ لیا جا سکتا ہے۔
+    </string>
+
+    <string name="guide_incident_title">واقعہ رپورٹ کرنا</string>
+    <string name="guide_incident_body">
+واقعہ رپورٹنگ آپ کو دورانِ ڈیوٹی کسی بھی غیر معمولی، غیر محفوظ یا اہم صورتحال کو ریکارڈ کرنے کی سہولت دیتی ہے۔
+
+اگر مطلوبہ واقعہ فہرست میں موجود نہ ہو تو کسی بھی آپشن کا انتخاب کریں اور صورتحال کی وضاحت اپنے الفاظ میں کریں۔
+
+درست رپورٹنگ آپ کے تحفظ اور بروقت کارروائی میں مدد دیتی ہے۔
+    </string>
+
+    <string name="guide_panic_title">پینک بٹن کا استعمال</string>
+    <string name="guide_panic_body">
+پینک بٹن صرف حقیقی ہنگامی صورتحال میں استعمال کے لیے ہے جہاں فوری مدد درکار ہو۔
+
+فعال ہونے پر یہ سسٹم کنٹرول سینٹر کو فوری الرٹ بھیجتا ہے، آپ کا مقام شیئر کرتا ہے اور سپروائزر کو مطلع کرتا ہے۔
+
+الرٹ کے بعد اپنی جگہ پر موجود رہیں اور دی گئی ہدایات پر عمل کریں۔
+    </string>
+
+    <string name="guide_panic_responsibility_title">پینک الرٹس کا ذمہ دارانہ استعمال</string>
+    <string name="guide_panic_responsibility_body">
+پینک الرٹس صرف جائز ہنگامی حالات میں استعمال کیے جانے چاہئیں۔
+
+غیر ضروری یا بلا جواز پینک الرٹ کی صورت میں واقعے کا جائزہ لیا جائے گا اور کمپنی پالیسی کے مطابق انتظامی کارروائی کی جا سکتی ہے۔
+    </string>
+
+    <string name="guide_device_title">ڈیوائس اور ڈیوٹی کی شرائط</string>
+    <string name="guide_device_body">
+ڈیوٹی کے دوران ڈیوائس کو آن اور ایپلیکیشن کو انسٹال اور فعال رکھنا ضروری ہے۔
+
+ایپلیکیشن کو بند، کلیئر، کیش یا حذف نہیں کیا جانا چاہیے۔ اضافی ایپس انسٹال کرنا یا سیٹنگز میں تبدیلی کی اجازت نہیں ہے۔
+
+اہم اعلانات سننے کے لیے والیوم بلند رکھنا ضروری ہے۔ ڈیوائس کی حالت، بیٹری اور استعمال کی نگرانی کی جا سکتی ہے۔
+
+ڈیوٹی کے آغاز پر ڈیوائس مکمل چارج ہونی چاہیے۔ اچانک یا غیر معمولی بیٹری کمی رپورٹ ہو سکتی ہے۔
+    </string>
+
+    <string name="guide_announcements_title">اعلانات اور صوتی الرٹس</string>
+    <string name="guide_announcements_body">
+ڈیوٹی کے دوران کنٹرول سینٹر سے اعلانات موصول ہو سکتے ہیں۔
+
+یہ اعلانات آواز کے ذریعے سنائے جائیں گے اور اسکرین پر بھی ظاہر ہو سکتے ہیں۔
+
+اگر آواز واضح نہ ہو تو تحریری اطلاع دکھائی جائے گی۔ براہ کرم تمام اعلانات پر توجہ دیں۔
+    </string>
+
+    <string name="guide_acknowledge">میں نے ایپ کے استعمال کی ہدایات پڑھ لی ہیں اور انہیں سمجھ لیا ہے</string>
+
+
+
+    <string name="guide_title">ایپ گائیڈ</string>
+    <string name="guide_button_label">ایپ گائیڈ</string>
+    <string name="guide_swipe_hint">جاری رکھنے کے لیے بائیں یا دائیں سوائپ کریں →</string>
+
+
+</resources>

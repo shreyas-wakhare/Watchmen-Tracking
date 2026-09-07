@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="incident_types">
+        <item>संदिग्ध गतिविधि</item>
+        <item>उपकरण में खराबी</item>
+        <item>सुरक्षा जोखिम</item>
+        <item>अनधिकृत प्रवेश</item>
+        <item>चिकित्सा आपातकाल</item>
+        <item>आग / धुआँ</item>
+        <item>चोरी / तोड़फोड़</item>
+        <item>अन्य</item>
+    </string-array>
+</resources>

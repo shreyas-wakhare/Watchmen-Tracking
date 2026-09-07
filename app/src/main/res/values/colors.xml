@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- DWEX Brand Colors -->
+    <color name="dwex_blue">#1976D2</color>
+    <color name="dwex_blue_dark">#0D47A1</color>
+    <color name="dwex_red">#D32F2F</color>
+    <color name="dwex_red_dark">#B71C1C</color>
+    
+    <!-- Primary Theme Colors -->
+    <color name="primary">#1976D2</color>
+    <color name="primary_dark">#0D47A1</color>
+    <color name="primary_light">#42A5F5</color>
+    <color name="accent">#D32F2F</color>
+    
+    <!-- Background Colors -->
+    <color name="background_primary">#FFFFFF</color>
+    <color name="background_secondary">#F5F5F5</color>
+    <color name="background_dark">#121212</color>
+    <color name="icon_tint_primary">#000000</color>
+    <!-- Text Colors -->
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#757575</color>
+    <color name="text_white">#FFFFFF</color>
+    <color name="text_hint">#9E9E9E</color>
+    
+    <!-- Status Colors -->
+    <color name="success">#4CAF50</color>
+    <color name="warning">#FF9800</color>
+    <color name="error">#F44336</color>
+    <color name="info">#2196F3</color>
+    
+    <!-- Card & Surface -->
+    <color name="card_background">#FFFFFF</color>
+    <color name="surface">#FAFAFA</color>
+    <color name="divider">#E0E0E0</color>
+    
+    <!-- Overlay & Shadow -->
+    <color name="overlay_dark">#80000000</color>
+    <color name="shadow">#1A000000</color>
+    <color name="text_title_light">#FFFFFF</color>
+    <color name="text_subtitle_light">#E0E0E0</color>
+    <color name="progress_accent">#FFC107</color>
+</resources>

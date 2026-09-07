@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="incident_types">
+        <item>مشکوک سرگرمی</item>
+        <item>آلات کی خرابی</item>
+        <item>حفاظتی خطرہ</item>
+        <item>غیر مجاز داخلہ</item>
+        <item>طبی ہنگامی حالت</item>
+        <item>آگ / دھواں</item>
+        <item>چوری / توڑ پھوڑ</item>
+        <item>دیگر</item>
+    </string-array>
+</resources>
+

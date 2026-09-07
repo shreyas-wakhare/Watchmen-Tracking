@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_secondary" 
+    tools:context=".MainActivity">
+
+    <ImageView
+        android:id="@+id/iv_main_activity_logo"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:src="@drawable/logo_dwex_vector"
+        android:contentDescription="@string/dwex_logo"
+        android:scaleType="fitCenter"
+        app:tint="@color/icon_tint_primary"
+        android:elevation="4dp"
+        android:transitionName="@string/logo_transition_name"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+    
+    <TextView
+        android:id="@+id/tv_main_app_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/app_title"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="@color/text_primary"
+        android:layout_marginStart="8dp"
+        app:layout_constraintStart_toEndOf="@id/iv_main_activity_logo"
+        app:layout_constraintTop_toTopOf="@id/iv_main_activity_logo"
+        app:layout_constraintBottom_toBottomOf="@id/iv_main_activity_logo"/>
+        
+    <ImageButton
+        android:id="@+id/btnSettings"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="16dp"
+        android:src="@android:drawable/ic_menu_preferences"
+        app:tint="@color/icon_tint_primary"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:padding="8dp"
+        android:contentDescription="@string/setup_title"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/iv_main_activity_logo"
+        app:layout_constraintBottom_toBottomOf="@id/iv_main_activity_logo" />
+
+
+    <ScrollView 
+        android:layout_width="match_parent"
+        android:layout_height="0dp" 
+        android:fillViewport="true"
+        app:layout_constraintTop_toBottomOf="@id/iv_main_activity_logo"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+        
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp"
+                app:cardBackgroundColor="@color/dwex_blue"> 
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Tracker Status"
+                        android:textSize="20sp"
+                        android:textColor="#FFFFFF"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp"/>
+
+                    <TextView
+                        android:id="@+id/statusText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/status_initializing"
+                        android:textSize="16sp"
+                        android:alpha="0.9"
+                        android:textColor="#FFFFFF" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/quick_actions"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="12dp"
+                android:layout_marginTop="16dp" />
+            
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                style="@style/Widget.DWEX.Card">
+
+                <Button
+                    android:id="@+id/btnCheckIn"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_check_in"
+                    android:textSize="16sp"
+                    android:padding="16dp"
+                    android:enabled="false"
+                    style="@style/Widget.Material3.Button.TextButton" />
+            </com.google.android.material.card.MaterialCardView>
+	    <com.google.android.material.card.MaterialCardView
+    		    android:layout_width="match_parent"
+    		    android:layout_height="wrap_content"
+    		    android:layout_marginBottom="12dp"
+    		    style="@style/Widget.DWEX.Card">
+
+    		<Button
+     		    android:id="@+id/btnAppGuide"
+    		    android:layout_width="match_parent"
+    		    android:layout_height="wrap_content"
+    		    android:text="@string/guide_button_label"
+    		    android:textSize="16sp"
+    		    android:padding="16dp"
+    		    style="@style/Widget.Material3.Button.TextButton"/>
+	    </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                style="@style/Widget.DWEX.Card">
+                <Button
+                    android:id="@+id/btnScanCheckpoint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_scan_checkpoint"
+                    android:textSize="16sp"
+                    android:padding="16dp"
+                    android:enabled="false"
+                    style="@style/Widget.Material3.Button.TextButton" />
+            </com.google.android.material.card.MaterialCardView>
+            
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                style="@style/Widget.DWEX.Card">
+                <Button
+                    android:id="@+id/btnIncidentReport"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_incident_report"
+                    android:textSize="16sp"
+                    android:padding="16dp"
+                    android:enabled="false"
+                    style="@style/Widget.Material3.Button.TextButton" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/emergency"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/dwex_red_dark"
+                android:layout_marginBottom="12dp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                style="@style/Widget.DWEX.Card"
+                app:cardBackgroundColor="@color/dwex_red">
+
+                <Button
+                    android:id="@+id/btnPanic"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/btn_panic"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF"
+                    android:padding="24dp"
+                    android:enabled="false"
+                    style="@style/Widget.Material3.Button.TextButton" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/panic_instruction"
+                android:textSize="12sp"
+                android:textAlignment="center"
+                android:textColor="#757575"
+                android:padding="12dp"
+                android:layout_marginBottom="32dp"/> 
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="incident_types">
+        <item>Suspicious Activity</item>
+        <item>Equipment Malfunction</item>
+        <item>Safety Hazard</item>
+        <item>Unauthorized Entry</item>
+        <item>Medical Emergency</item>
+        <item>Fire / Smoke</item>
+        <item>Theft / Vandalism</item>
+        <item>Other</item>
+    </string-array>
+
+</resources>
