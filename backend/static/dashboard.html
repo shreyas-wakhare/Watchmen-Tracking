@@ -1,0 +1,2389 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Watchmen Tracker | Elite Command Center</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --bg-primary: #10142d;
+            --bg-secondary: #1a1f44;
+            --bg-card: rgba(26, 31, 68, 0.98);
+            --accent-primary: #00f5ff;
+            --accent-secondary: #a855f7;
+            --accent-success: #22d3ee;
+            --accent-warning: #fbbf24;
+            --accent-danger: #f87171;
+            --text-primary: #ffffff;
+            --text-secondary: #f1f5f9;
+            --border-color: rgba(0, 245, 255, 0.4);
+            --shadow-glow: 0 0 30px rgba(0, 245, 255, 0.1);
+            --sidebar-width: 320px;
+            --header-height: 70px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .stat-label {
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .stat-value {
+            color: var(--accent-primary) !important;
+            text-shadow: 0 0 15px rgba(0, 245, 255, 0.4);
+        }
+
+        .stat-value {
+            font-weight: 900;
+            letter-spacing: -1px;
+            text-shadow: 0 0 10px rgba(0, 245, 255, 0.3);
+        }
+
+        .info-label {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* Midnight Theme */
+        body.theme-midnight {
+            --bg-primary: #020617;
+            --bg-secondary: #0f172a;
+            --bg-card: rgba(15, 23, 42, 0.98);
+            --accent-primary: #38bdf8;
+            --accent-secondary: #2563eb;
+            --border-color: rgba(56, 189, 248, 0.2);
+            --shadow-glow: 0 0 40px rgba(37, 99, 235, 0.2);
+        }
+
+        /* High Contrast Theme */
+        body.theme-high-contrast {
+            --bg-primary: #000000;
+            --bg-secondary: #1a1a1a;
+            --bg-card: #000000;
+            --accent-primary: #ffff00;
+            --accent-secondary: #ffffff;
+            --text-primary: #ffffff;
+            --text-secondary: #cccccc;
+            --border-color: #ffffff;
+            --shadow-glow: none;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            line-height: 1.6;
+            transition: var(--transition);
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(circle at 20% 50%, rgba(124, 58, 237, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(0, 245, 255, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        /* ============================================================
+           🎯 TOP NAVIGATION BAR
+           ============================================================ */
+        .top-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: var(--header-height);
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            padding: 0 2rem;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-right: auto;
+        }
+
+        .logo-icon {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            box-shadow: 0 4px 20px rgba(0, 245, 255, 0.4);
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 4px 20px rgba(0, 245, 255, 0.4);
+            }
+
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 6px 30px rgba(0, 245, 255, 0.6);
+            }
+        }
+
+        .logo-text h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-primary), #fff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-text .subtitle {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-top: -2px;
+            font-weight: 500;
+        }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .device-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-secondary);
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .device-selector select {
+            min-width: 180px;
+            background: transparent;
+            border: none;
+            color: var(--accent-primary);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            font-size: 0.85rem;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent-success);
+            animation: statusPulse 2s infinite;
+        }
+
+        @keyframes statusPulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.6;
+                transform: scale(1.3);
+            }
+        }
+
+        .nav-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(120px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .stat-card.green {
+            border-color: rgba(16, 185, 129, .5);
+        }
+
+        .stat-card.red {
+            border-color: rgba(239, 68, 68, .5);
+        }
+
+        .stat-card.purple {
+            border-color: rgba(124, 58, 237, .5);
+        }
+
+        .stat-card.orange {
+            border-color: rgba(245, 158, 11, .5);
+        }
+
+        .badge-override {
+            background: #f59e0b;
+            color: #000;
+            padding: .25rem .5rem;
+            border-radius: 6px;
+            font-size: .7rem;
+            font-weight: 700;
+        }
+
+        .badge-failed {
+            background: #ef4444;
+            color: #fff;
+            padding: .25rem .5rem;
+            border-radius: 6px;
+            font-size: .7rem;
+            font-weight: 700;
+        }
+
+        .badge-spoof {
+            background: #7c3aed;
+            color: #fff;
+            padding: .25rem .5rem;
+            border-radius: 6px;
+            font-size: .7rem;
+            font-weight: 700;
+        }
+
+        .badge-live {
+            background: #10b981;
+            color: #000;
+            padding: .25rem .5rem;
+            border-radius: 6px;
+            font-size: .7rem;
+            font-weight: 700;
+        }
+
+        .nav-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .nav-btn:hover {
+            background: var(--accent-primary);
+            color: #000;
+            border-color: var(--accent-primary);
+            transform: translateY(-2px);
+        }
+
+        .nav-btn.active {
+            background: var(--accent-primary);
+            color: #000;
+            border-color: var(--accent-primary);
+        }
+
+        /* ============================================================
+           📱 SIDEBAR NAVIGATION
+           ============================================================ */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: var(--header-height);
+            width: var(--sidebar-width);
+            height: calc(100vh - var(--header-height));
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--border-color);
+            z-index: 900;
+            overflow-y: auto;
+            padding: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--accent-primary);
+            border-radius: 3px;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-section {
+            margin-bottom: 2rem;
+        }
+
+        .sidebar-title {
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .sidebar-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .menu-item {
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.95rem;
+        }
+
+        .menu-item span {
+            color: #ffffff;
+            font-weight: 500;
+        }
+
+        .menu-item:hover {
+            background: rgba(0, 245, 255, 0.2);
+            border-color: var(--accent-primary);
+            transform: translateX(5px);
+        }
+
+        .menu-item.active {
+            background: linear-gradient(135deg, rgba(0, 245, 255, 0.3), rgba(168, 85, 247, 0.3));
+            border-color: var(--accent-primary);
+            font-weight: 700;
+            box-shadow: 0 0 15px rgba(0, 245, 255, 0.2);
+        }
+
+        .menu-item i {
+            width: 20px;
+            text-align: center;
+            color: var(--accent-primary);
+            font-size: 1.1rem;
+        }
+
+        .menu-badge {
+            margin-left: auto;
+            padding: 0.2rem 0.5rem;
+            background: var(--accent-danger);
+            color: #fff;
+            border-radius: 5px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        /* ============================================================
+           🗺️ MAIN CONTENT AREA
+           ============================================================ */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            margin-top: var(--header-height);
+            padding: 2rem;
+            min-height: calc(100vh - var(--header-height));
+            transition: var(--transition);
+        }
+
+        .main-content.expanded {
+            margin-left: 0;
+        }
+
+        .view-container {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .view-container.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .view-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .view-title {
+            font-size: 2rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .view-title i {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .view-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        /* ============================================================
+           📊 STATS CARDS
+           ============================================================ */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+        }
+
+        .stat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            opacity: 0.3;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-primary);
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-change {
+            font-size: 0.75rem;
+            color: var(--accent-success);
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .stat-change.negative {
+            color: var(--accent-danger);
+        }
+
+        /* ============================================================
+           🗺️ MAP CONTAINER
+           ============================================================ */
+        .map-container {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: transparent;
+            pointer-events: none;
+        }
+
+        .map-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .map-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .map-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        #map {
+            width: 100%;
+            height: 550px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .map-toolbar {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            background: var(--bg-secondary);
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* ============================================================
+           🎨 BUTTONS & INPUTS
+           ============================================================ */
+        button,
+        select,
+        input {
+            font-family: inherit;
+            transition: var(--transition);
+        }
+
+        .btn {
+            padding: 0.6rem 1.2rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 245, 255, 0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+            color: #000;
+            font-weight: 600;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0, 245, 255, 0.4);
+        }
+
+        .btn-danger {
+            background: var(--accent-danger);
+            border: none;
+            color: #fff;
+        }
+
+        .btn-sm {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        select,
+        input[type="number"],
+        input[type="text"],
+        input[type="date"] {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        select:hover,
+        input:hover {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 10px rgba(0, 245, 255, 0.2);
+        }
+
+        input[type="number"],
+        input[type="text"],
+        input[type="date"] {
+            width: 120px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent-primary);
+            cursor: pointer;
+        }
+
+        /* ============================================================
+           📋 CARDS & PANELS
+           ============================================================ */
+        .card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-glow);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card-title i {
+            color: var(--accent-primary);
+            font-size: 1.2rem;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* ============================================================
+           🎨 ALERTS & NOTIFICATIONS
+           ============================================================ */
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.9rem;
+            animation: slideDown 0.4s ease-out;
+            border-left: 4px solid;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-15px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert.warning {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: var(--accent-warning);
+            color: var(--accent-warning);
+        }
+
+        .alert.danger {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: var(--accent-danger);
+            color: var(--accent-danger);
+        }
+
+        .alert.success {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: var(--accent-success);
+            color: var(--accent-success);
+        }
+
+        .alert.info {
+            background: rgba(0, 245, 255, 0.2);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .alert i {
+            font-size: 1.5rem;
+        }
+
+        /* ============================================================
+           📊 CHART CONTAINER
+           ============================================================ */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 1rem;
+        }
+
+        /* ============================================================
+           📱 TABS
+           ============================================================ */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border-color);
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .tab.active {
+            color: var(--accent-primary);
+            border-bottom-color: var(--accent-primary);
+            font-weight: 700;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+            background: rgba(0, 245, 255, 0.05);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        /* ============================================================
+           📋 LIST ITEMS
+           ============================================================ */
+        .list-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            transition: var(--transition);
+        }
+
+        .list-item:hover {
+            border-color: var(--accent-primary);
+            transform: translateX(5px);
+        }
+
+        .list-item-content {
+            flex: 1;
+        }
+
+        .list-item-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .list-item-meta {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .list-item-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* ============================================================
+           🎭 MODAL
+           ============================================================ */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            animation: modalSlide 0.3s ease-out;
+        }
+
+        @keyframes modalSlide {
+            from {
+                opacity: 0;
+                transform: translateY(-30px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 0;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+
+        .modal-close:hover {
+            background: var(--accent-danger);
+            color: #fff;
+        }
+
+        /* ============================================================
+           📱 RESPONSIVE
+           ============================================================ */
+        @media (max-width: 1024px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: var(--header-height);
+                width: 85%;
+                max-width: 320px;
+                transform: translateX(-100%);
+                z-index: 1500;
+                box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .top-nav {
+                padding: 0 1rem;
+            }
+
+            .nav-controls {
+                gap: 0.75rem;
+            }
+
+            .device-selector select {
+                min-width: 120px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            #map {
+                height: 400px;
+            }
+        }
+
+        /* ============================================================
+           🎨 BADGES
+           ============================================================ */
+        .badge {
+            display: inline-block;
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge.success {
+            background: var(--accent-success);
+            color: #000;
+        }
+
+        .badge.warning {
+            background: var(--accent-warning);
+            color: #000;
+        }
+
+        .badge.danger {
+            background: var(--accent-danger);
+            color: #fff;
+        }
+
+        .badge.info {
+            background: var(--accent-primary);
+            color: #000;
+        }
+
+        /* ============================================================
+           🎬 LOADING
+           ============================================================ */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ============================================================
+           📊 INFO TABLE
+           ============================================================ */
+        .info-table {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .info-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .info-value {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        /* ============================================================
+           🎨 UTILITIES
+           ============================================================ */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .mb-1 {
+            margin-bottom: 1rem;
+        }
+
+        .mb-2 {
+            margin-bottom: 2rem;
+        }
+
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* ============================================================
+           🎭 PHOTO GALLERY
+           ============================================================ */
+        #photoMain {
+            width: 100%;
+            height: 350px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            object-fit: contain;
+            margin-bottom: 1rem;
+        }
+
+        #thumbStrip {
+            display: flex;
+            gap: 0.75rem;
+            overflow-x: auto;
+            padding-bottom: 0.75rem;
+        }
+
+        .thumb {
+            width: 100px;
+            height: 75px;
+            border-radius: 8px;
+            border: 2px solid var(--border-color);
+            object-fit: cover;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: var(--transition);
+        }
+
+        .thumb:hover,
+        .thumb.active {
+            border-color: var(--accent-primary);
+            transform: scale(1.05);
+        }
+
+        /* ============================================================
+           🎨 SCROLLBAR
+           ============================================================ */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-primary);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-secondary);
+        }
+
+        /* ============================================================
+           🎨 ANALYSIS BOX
+           ============================================================ */
+        .analysis-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.25rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            max-height: 350px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* ============================================================
+           🎨 PLAYBACK CONTROLS
+           ============================================================ */
+        input[type="range"] {
+            flex: 1;
+            min-width: 200px;
+            height: 6px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+            border: 1px solid var(--border-color);
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent-primary);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* ============================================================
+           🎨 FORM GROUP
+           ============================================================ */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.6rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+        }
+
+        textarea {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 10px rgba(0, 245, 255, 0.2);
+        }
+
+        /* ============================================================
+           💬 CHAT & COMMAND PANEL
+           ============================================================ */
+        .command-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .cmd-btn {
+            background: rgba(21, 25, 51, 0.8);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 1rem;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .cmd-btn:hover {
+            border-color: var(--accent-primary);
+            background: rgba(0, 245, 255, 0.1);
+            transform: translateY(-3px);
+        }
+
+        .cmd-btn:active {
+            transform: translateY(0);
+        }
+
+        .cmd-btn i {
+            font-size: 1.5rem;
+            color: var(--accent-primary);
+        }
+
+        .cmd-btn.danger:hover {
+            border-color: var(--accent-danger);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .cmd-btn.danger i {
+            color: var(--accent-danger);
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 400px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .chat-msg {
+            max-width: 80%;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            position: relative;
+        }
+
+        .chat-msg.sent {
+            align-self: flex-end;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: #000;
+            border-bottom-right-radius: 2px;
+        }
+
+        .chat-msg.received {
+            align-self: flex-start;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 2px;
+        }
+
+        .chat-input-area {
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem;
+            border-radius: 8px;
+            color: var(--text-primary);
+        }
+
+        .chat-input-area button {
+            width: 45px;
+            height: 45px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .status-ring {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .status-ring svg {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+
+        .status-ring circle {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+        }
+
+        .status-ring .bg {
+            stroke: var(--bg-secondary);
+        }
+
+        .status-ring .progress {
+            stroke: var(--accent-primary);
+            transition: stroke-dashoffset 1s ease-in-out;
+        }
+
+        /* -------------------- PREMIUM MARKERS -------------------- */
+        .premium-marker {
+            position: relative;
+            pointer-events: none !important;
+        }
+
+        .marker-pulse {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse-ring 2s infinite;
+        }
+
+        .marker-label {
+            position: absolute;
+            top: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.85);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            color: #fff;
+            white-space: nowrap;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(4px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                transform: translate(-50%, -50%) scale(0.8);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(2.5);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- ============================================================
+         🎯 TOP NAVIGATION
+         ============================================================ -->
+    <div class="top-nav">
+        <div class="logo">
+            <img src="/static/logo_watchmen.png" alt="Watchmen Logo" style="height: 50px;">
+            <div class="logo-text">
+                <h1>Watchmen Elite</h1>
+                <div class="subtitle">Command & Control Center</div>
+            </div>
+        </div>
+
+        <div class="nav-controls">
+            <div class="device-selector">
+                <i class="fas fa-mobile-alt" style="color: var(--accent-primary);"></i>
+                <select id="deviceSelector">
+                    <option value="">All Devices</option>
+                </select>
+            </div>
+            <button id="requestLocationBtn" class="btn btn-primary btn-sm" style="padding:0.55rem 0.9rem;">
+                <i class="fas fa-satellite"></i> Request Live Location
+            </button>
+
+
+            <div class="connection-status">
+                <div class="status-dot" id="connectionStatus"></div>
+                <span id="connectionText">Connected</span>
+            </div>
+
+            <div class="nav-actions">
+                <button class="nav-btn" id="toggleSidebar" title="Toggle Sidebar">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <button class="nav-btn" title="Send Announcement" id="btnOpenAnnouncementTop">
+                    <i class="fas fa-bullhorn"></i>
+                </button>
+
+
+                <button class="nav-btn" id="toggleFullscreen" title="Fullscreen">
+                    <i class="fas fa-expand"></i>
+                </button>
+                <button class="nav-btn" id="exportDataBtnTop" onclick="exportCSV()" title="Export Data (CSV)">
+                    <i class="fas fa-file-csv"></i>
+                </button>
+                <button class="nav-btn" title="Open Chat" onclick="showDashboardView('alerts')">
+                    <i class="fas fa-comments"></i>
+                </button>
+                <button class="nav-btn" id="settingsBtn" title="Settings">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+     📱 SIDEBAR NAVIGATION
+     ============================================================ -->
+    <div class="sidebar" id="sidebar">
+
+        <!-- Navigation Section -->
+        <div class="sidebar-section">
+            <div class="sidebar-title">
+                <i class="fas fa-tachometer-alt"></i>
+                Navigation
+            </div>
+            <div class="sidebar-menu">
+                <div class="menu-item active" data-view="dashboard">
+                    <i class="fas fa-th-large"></i>
+                    <span>Dashboard</span>
+                </div>
+                <div class="menu-item" data-view="map">
+                    <i class="fas fa-map-marked-alt"></i>
+                    <span>Live Tracking</span>
+                </div>
+                <div class="menu-item" data-view="analytics">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Analytics</span>
+                </div>
+                <div class="menu-item" data-view="alerts">
+                    <i class="fas fa-bell"></i>
+                    <span>Alerts</span>
+                    <span class="menu-badge" id="alertBadge">0</span>
+                </div>
+                <div class="menu-item" data-view="incidents">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Incidents</span>
+                </div>
+                <div class="menu-item" data-view="announcements">
+                    <i class="fas fa-bullhorn"></i>
+                    <span>Announcements</span>
+                    <span class="menu-badge" id="annBadge" style="display:none">0</span>
+                </div>
+                <div class="menu-item" data-view="geofences">
+                    <i class="fas fa-draw-polygon"></i>
+                    <span>Geofences</span>
+                </div>
+                <div class="menu-item" data-view="photos">
+                    <i class="fas fa-camera"></i>
+                    <span>Photo Gallery</span>
+                </div>
+                <div class="menu-item" data-view="checkpoints">
+                    <i class="fas fa-qrcode"></i>
+                    <span>Checkpoints</span>
+                </div>
+                <div class="menu-item" data-view="bugs">
+                    <i class="fas fa-bug"></i>
+                    <span>Bug Reports</span>
+                    <span class="menu-badge" id="bugBadge" style="display:none">0</span>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Tools Section -->
+        <div class="sidebar-section">
+            <div class="sidebar-title">
+                <i class="fas fa-tools"></i>
+                Tools
+            </div>
+            <div class="sidebar-menu">
+                <div class="menu-item" id="exportDataBtn" onclick="exportCSV()">
+                    <i class="fas fa-download"></i>
+                    <span>Export Data</span>
+                </div>
+                <div class="menu-item" id="playbackBtn">
+                    <i class="fas fa-play-circle"></i>
+                    <span>Playback Mode</span>
+                </div>
+                <div class="menu-item" id="refreshAllBtn">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Refresh All</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- ============================================================
+         🗺️ MAIN CONTENT
+         ============================================================ -->
+    <div class="main-content" id="mainContent">
+
+        <!-- ============================================================
+     📊 DASHBOARD VIEW
+     ============================================================ -->
+        <div class="view-container active" id="view-dashboard">
+            <div class="view-header">
+                <div class="view-title">
+                    <div
+                        style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                        <i class="fas fa-th-large"></i>
+                    </div>
+                    <span>Dashboard Overview</span>
+                </div>
+                <div class="view-actions">
+                    <button class="btn btn-primary" id="refreshDashboard">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+
+            <!-- Alert Banner -->
+            <div id="alertBanner" class="hidden"></div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Battery Level</span>
+                        <span class="stat-icon">🔋</span>
+                    </div>
+                    <div class="stat-value" id="battery">--%</div>
+                    <div class="stat-change">
+                        <i class="fas fa-arrow-down"></i>
+                        <span>Updated live</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Daily Steps</span>
+                        <span class="stat-icon">👣</span>
+                    </div>
+                    <div class="stat-value" id="steps">--</div>
+                    <div class="stat-change">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>Today's progress</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Current Speed</span>
+                        <span class="stat-icon">⚡</span>
+                    </div>
+                    <div class="stat-value" id="speed">--</div>
+                    <div class="stat-change">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Real-time</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <span class="stat-label">Last Update</span>
+                        <span class="stat-icon">🕐</span>
+                    </div>
+                    <div class="stat-value" id="time">--:--</div>
+                    <div class="stat-change">
+                        <i class="fas fa-clock"></i>
+                        <span id="deviceId">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Map + Sidebar Layout -->
+            <div class="grid-2">
+                <!-- Map Card -->
+                <div class="map-container" style="grid-column: span 1;">
+                    <div class="map-header">
+                        <div class="map-title">
+                            <i class="fas fa-map-marked-alt"></i>
+                            Live Location Tracking
+                        </div>
+                        <div class="map-controls">
+                            <button class="btn btn-sm" id="resetView">
+                                <i class="fas fa-crosshairs"></i>
+                            </button>
+                            <button class="btn btn-sm" id="drawGeofence">
+                                <i class="fas fa-draw-polygon"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="map"></div>
+
+                    <div class="map-toolbar">
+                        <div class="toolbar-group">
+                            <label><i class="far fa-clock"></i></label>
+                            <select id="rangeSel">
+                                <option value="15">Last 15m</option>
+                                <option value="60" selected>Last 1h</option>
+                                <option value="360">Last 6h</option>
+                                <option value="1440">Last 24h</option>
+                                <option value="0">All Time</option>
+                            </select>
+                        </div>
+
+                        <div class="toolbar-group">
+                            <label>Points</label>
+                            <input id="countInput" type="number" min="1" max="50000" value="200" />
+                        </div>
+
+                        <div class="toolbar-group">
+                            <label><input type="checkbox" id="toggleTrail" checked /> Trail</label>
+                            <label><input type="checkbox" id="toggleFollow" checked /> Follow</label>
+                        </div>
+
+                        <button class="btn btn-primary" id="reloadBtn">
+                            <i class="fas fa-sync-alt"></i> Reload
+                        </button>
+                    </div>
+
+                    <!-- Playback Controls -->
+                    <div class="map-toolbar">
+                        <label style="flex-shrink: 0;">Playback:</label>
+                        <input type="range" id="playSlider" min="0" max="100" value="0">
+                        <button class="btn" id="playToggle"><i class="fas fa-play"></i> Play</button>
+                    </div>
+                </div>
+
+                <!-- Device Info Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-info-circle"></i>
+                            Device Information
+                        </div>
+                    </div>
+                    <div class="info-table">
+                        <div class="info-row">
+                            <span class="info-label">GPS Accuracy</span>
+                            <span class="info-value" id="accuracy">-- m</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Altitude</span>
+                            <span class="info-value" id="altitude">-- m</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Bearing</span>
+                            <span class="info-value" id="bearing">--°</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Tracking State</span>
+                            <span class="info-value" id="trackingState">--</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Connection</span>
+                            <span class="info-value" id="offlineStatus">
+                                <i class="fas fa-wifi" style="color: var(--accent-success);"></i> Online
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Total Points</span>
+                            <span class="info-value" id="pointCount">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Command & Chat Grid -->
+                <div class="card" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-terminal"></i>
+                            Command Center
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <!-- Quick Actions -->
+                        <div>
+                            <h4 class="mb-1"
+                                style="color:var(--text-secondary); text-transform:uppercase; font-size:0.8rem; letter-spacing:1px;">
+                                Remote Actions</h4>
+                            <div class="command-grid">
+                                <button class="cmd-btn danger" onclick="sendCommand('START_SIREN')">
+                                    <i class="fas fa-bullhorn"></i>
+                                    <span>Trigger Siren</span>
+                                </button>
+                                <button class="cmd-btn" onclick="sendCommand('GET_LOCATION')">
+                                    <i class="fas fa-crosshairs"></i>
+                                    <span>Force Location</span>
+                                </button>
+                                <button class="cmd-btn" onclick="sendCommand('WIPE_CACHE')">
+                                    <i class="fas fa-trash-alt"></i>
+                                    <span>Wipe Cache</span>
+                                </button>
+                                <button class="cmd-btn" onclick="sendCommand('RESTART_SERVICE')">
+                                    <i class="fas fa-power-off"></i>
+                                    <span>Restart Service</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 2-Way Chat -->
+                        <div>
+                            <h4 class="mb-1"
+                                style="color:var(--text-secondary); text-transform:uppercase; font-size:0.8rem; letter-spacing:1px;">
+                                Secure Comm Channel</h4>
+                            <div class="chat-container">
+                                <div class="chat-messages" id="chatMessages">
+                                    <div class="chat-msg received">
+                                        Device connected. Secure channel established.
+                                        <div style="font-size:0.7rem; opacity:0.7; margin-top:4px;">System • Now</div>
+                                    </div>
+                                </div>
+                                <div class="chat-input-area">
+                                    <input type="text" id="chatInput" placeholder="Type instructions..." />
+                                    <button class="btn btn-primary" onclick="sendMessage()">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Chart -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-chart-line"></i>
+                        Activity Timeline
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+     🗺️ MAP VIEW
+     ============================================================ -->
+        <div class="view-container" id="view-map">
+            <div class="view-header">
+                <div class="view-title">
+                    <div
+                        style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                        <i class="fas fa-map-marked-alt"></i>
+                    </div>
+                    <span>Live Tracking Map</span>
+                </div>
+            </div>
+            <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Full-screen map view coming
+                soon...</p>
+        </div>
+        <!-- ============================================================
+     🐞 BUG REPORTS VIEW
+    ============================================================ -->
+        <div class="view-container" id="view-bugs">
+            <div class="view-header">
+                <div class="view-title">
+                    <div
+                        style="width:50px;height:50px;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">
+                        <i class="fas fa-bug"></i>
+                    </div>
+                    <span>Bug Reports</span>
+                </div>
+
+                <div class="view-actions">
+                    <button class="btn btn-primary" id="refreshBugs">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary Stats -->
+            <div class="stats-row">
+                <div class="stat-card red">Critical<br><span id="statBugCritical">0</span></div>
+                <div class="stat-card orange">High<br><span id="statBugHigh">0</span></div>
+                <div class="stat-card purple">Medium<br><span id="statBugMedium">0</span></div>
+                <div class="stat-card green">Low<br><span id="statBugLow">0</span></div>
+            </div>
+
+            <!-- Bug List -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-list"></i>
+                        Recent Bug Reports
+                    </div>
+                </div>
+                <div id="bugList" class="list-container"></div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+     📊 ANALYTICS VIEW
+     ============================================================ -->
+        <div class="view-container" id="view-analytics">
+            <div class="view-header">
+                <div class="view-title">
+                    <div
+                        style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <span>Analytics Dashboard</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="tabs">
+                    <button class="tab active" data-tab="summary">Summary</button>
+                    <button class="tab" data-tab="battery">Battery</button>
+                    <button class="tab" data-tab="distance">Distance</button>
+                    <button class="tab" data-tab="states">States</button>
+                </div>
+
+                <div class="tab-content active" id="tab-summary">
+                    <div class="flex-between mb-1">
+                        <button class="btn btn-primary" id="loadSummary">
+                            <i class="fas fa-route"></i> Load Summary
+                        </button>
+                        <button class="btn" id="loadAnomalies">
+                            <i class="fas fa-exclamation-triangle"></i> Anomalies
+                        </button>
+                    </div>
+                    <div class="analysis-box" id="summaryBox">Click "Load Summary" to view route analytics...</div>
+                    <div class="analysis-box" id="anomaliesBox" style="margin-top: 1rem;">Click "Anomalies" to detect
+                        anomalies...</div>
+
+                </div>
+
+                <div class="tab-content" id="tab-battery">
+                    <button class="btn btn-primary" id="loadBattery">
+                        <i class="fas fa-battery-three-quarters"></i> Load Battery Stats
+                    </button>
+                    <div class="analysis-box" id="batteryBox">Loading...</div>
+                </div>
+
+                <div class="tab-content" id="tab-distance">
+                    <button class="btn btn-primary" id="loadDistance">
+                        <i class="fas fa-route"></i> Load Distance Stats
+                    </button>
+                    <div class="analysis-box" id="distanceBox">Loading...</div>
+                </div>
+
+                <div class="tab-content" id="tab-states">
+                    <button class="btn btn-primary" id="loadStates">
+                        <i class="fas fa-chart-pie"></i> Load State Distribution
+                    </button>
+                    <div class="analysis-box" id="statesBox">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+     🔔 ALERTS VIEW
+     ============================================================ -->
+        <div class="view-container" id="view-alerts">
+            <div class="view-header">
+                <div class="view-title">
+                    <div
+                        style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <span>Alert Management</span>
+                </div>
+                <div class="view-actions">
+                    <button class="btn btn-primary" id="refreshAlerts">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="stats-row">
+                <div class="stat-card green">Live<br><span id="statLive">0</span></div>
+                <div class="stat-card red">Failed<br><span id="statFailed">0</span></div>
+                <div class="stat-card purple">Spoof<br><span id="statSpoof">0</span></div>
+                <div class="stat-card orange">Override<br><span id="statOverride">0</span></div>
+                <div class="stat-card yellow">Avg Speed<br><span id="statAvgSpeed">--</span></div>
+
+            </div>
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-exclamation-circle"></i>
+                            Recent Alerts
+                        </div>
+                    </div>
+                    <div id="alertsHistory" class="list-container"></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-shield-alt"></i>
+                            Security Alerts
+                        </div>
+                    </div>
+                    <div id="securityAlerts" class="list-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+     📋 INCIDENTS VIEW
+     ============================================================ -->
+        <div class="view-container" id="view-incidents">
+            <div class="view-header">
+                <div class="view-title">
+                    <div
+                        style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <span>Incident Reports</span>
+                </div>
+                <div class="view-actions">
+                    <button class="btn btn-primary" id="loadIncidents">
+                        <i class="fas fa-sync-alt"></i> Load Incidents
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div id="incidentsBox" class="list-container"></div>
+            </div>
+        </div>
+        <!-- ============================================================
+    📣 ANNOUNCEMENTS VIEW
+    ============================================================ -->
+        <div class="view-container" id="view-announcements">
+            <div class="view-header">
+                <div class="view-title">
+                    <div
+                        style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                        <i class="fas fa-bullhorn"></i>
+                    </div>
+                    <div>
+                        <div>Announcements Center</div>
+                        <small style="color: var(--text-secondary); font-size: 0.8rem;">
+                            Broadcast messages to Watchmen devices and monitor delivery
+                        </small>
+                    </div>
+                </div>
+                <div class="view-actions">
+                    <button class="btn btn-primary" id="btnOpenAnnouncementMain">
+                        <i class="fas fa-plus"></i> New Announcement
+                    </button>
+
+                    <button class="btn" id="refreshAnnouncements">
+                        <i class="fas fa-rotate"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-list"></i> Recent Announcements (last 24h)
+                    </div>
+                </div>
+                <div id="announcementsList">
+                    <!-- filled by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+     🗺️ GEOFENCES VIEW
+     ============================================================ -->
+        <div class="view-container" id="view-geofences">
+            <div class="view-header">
+                <div class="view-title">
+                    <div
+                        style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                        <i class="fas fa-draw-polygon"></i>
+                    </div>
+                    <span>Geofence Management</span>
+                </div>
+                <div class="view-actions">
+                    <button class="btn btn-primary" id="manageGeofences">
+                        <i class="fas fa-layer-group"></i> Manage Zones
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-history"></i>
+                            Zone Activity
+                        </div>
+                    </div>
+                    <div id="geofenceEvents" class="list-container"></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fas fa-map-pin"></i>
+                            Active Geofences
+                        </div>
+                    </div>
+                    <div id="geofenceList" class="list-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+     📷 PHOTOS VIEW
+     ============================================================ -->
+        <div class="view-container" id="view-photos">
+            <div class="view-header">
+                <div class="view-title">
+                    <div
+                        style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                    <span>Photo Gallery</span>
+                </div>
+                <div class="view-actions">
+                    <button class="btn btn-primary" id="refreshPhotos">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <img id="photoMain" alt="No photos available">
+                <div id="thumbStrip"></div>
+                <div class="map-toolbar">
+                    <select id="photoLimit">
+                        <option value="5">5 photos</option>
+                        <option value="10" selected>10 photos</option>
+                        <option value="20">20 photos</option>
+                        <option value="50">50 photos</option>
+                    </select>
+                    <a id="downloadPhoto" href="#" download style="margin-left: auto;">
+                        <button class="btn"><i class="fas fa-download"></i> Download</button>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+     📍 CHECKPOINTS VIEW
+     ============================================================ -->
+        <div class="view-container" id="view-checkpoints">
+            <div class="view-header">
+                <div class="view-title">
+                    <div
+                        style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                        <i class="fas fa-qrcode"></i>
+                    </div>
+                    <span>Checkpoint Visits</span>
+                </div>
+                <div class="view-actions">
+                    <button class="btn btn-primary" id="loadCheckpoints">
+                        <i class="fas fa-sync-alt"></i> Load Checkpoints
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div id="checkpointsBox" class="list-container"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ============================================================
+         🎭 MODALS
+         ============================================================ -->
+    <!-- Geofence Management Modal -->
+    <div id="geofenceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Manage Geofences</span>
+                <button class="modal-close" onclick="closeGeofenceModal()">×</button>
+            </div>
+            <div id="geofenceListModal" class="list-container"></div>
+        </div>
+    </div>
+
+
+    <!-- Geofence Creation Modal -->
+    <div id="createGeofenceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Create Geofence</span>
+                <button class="modal-close" onclick="closeCreateModal()">×</button>
+            </div>
+            <div class="form-group">
+                <label>Zone Name</label>
+                <input type="text" id="geofenceName" placeholder="e.g., Construction Site A">
+            </div>
+            <div class="form-group">
+                <label>Radius (meters)</label>
+                <input type="number" id="geofenceRadius" value="100" min="10" max="5000">
+            </div>
+            <div class="form-group">
+                <label>Color</label>
+                <input type="text" id="geofenceColor" value="#00f5ff">
+            </div>
+            <button class="btn btn-primary" onclick="saveGeofence()" style="width: 100%;">
+                <i class="fas fa-save"></i> Create Geofence
+            </button>
+        </div>
+    </div>
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content card" style="max-width: 500px;">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fas fa-cog"></i> System Settings
+                </div>
+                <button class="modal-close" onclick="closeSettingsModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Dashboard Refresh Rate (sec)</label>
+                    <input type="number" id="settingRefresh" value="30" min="5" max="300">
+                </div>
+                <div class="form-group">
+                    <label>Map Auto-Follow</label>
+                    <select id="settingFollow">
+                        <option value="true">Enabled</option>
+                        <option value="false">Disabled</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Theme</label>
+                    <select id="settingTheme">
+                        <option value="elite-dark">Elite Dark (Default)</option>
+                        <option value="midnight">Midnight</option>
+                        <option value="high-contrast">High Contrast</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" id="settingNotifs" checked> Desktop Notifications</label>
+                </div>
+            </div>
+            <div class="modal-footer" style="display:flex; justify-content:flex-end; margin-top:1.5rem;">
+                <button class="btn btn-primary" onclick="saveSettings()">
+                    <i class="fas fa-save"></i> Save Settings
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/dashboard.js" defer></script>
+
+    <!-- ============================================================
+     📣 ANNOUNCEMENT MODAL
+     ============================================================ -->
+
+    <div id="announcementModal" class="modal">
+        <div class="modal-backdrop" id="announcementBackdrop"></div>
+        <div class="modal-content card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fas fa-bullhorn"></i> New Announcement
+                </div>
+                <button class="nav-btn" onclick="closeAnnouncementModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="annTitle">Title (optional)</label>
+                    <input id="annTitle" type="text" placeholder="e.g. Night Shift Briefing">
+                </div>
+
+                <div class="form-group">
+                    <label for="annMessage">Message *</label>
+                    <textarea id="annMessage" rows="4"
+                        placeholder="Enter the message that will be read on the device..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="annDevice">Target Device</label>
+                    <select id="annDevice">
+                        <!-- filled by JS: broadcast + devices -->
+                    </select>
+                </div>
+
+                <div class="form-row" style="display:flex; gap:1rem; flex-wrap:wrap;">
+                    <div class="form-group">
+                        <label for="annPriority">Priority</label>
+                        <select id="annPriority">
+                            <option value="NORMAL">Normal</option>
+                            <option value="HIGH">High</option>
+                            <option value="CRITICAL">Critical</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label><input type="checkbox" id="annTTS" checked> Text-to-Speech</label><br>
+                        <label><input type="checkbox" id="annVibrate"> Vibrate</label><br>
+                        <label><input type="checkbox" id="annRaiseAlert"> Raise alert</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:0.75rem;">
+                <button class="btn" id="btnAnnouncementCancel">Cancel</button>
+                <button class="btn btn-primary" id="btnAnnouncementSend">
+                    <i class="fas fa-paper-plane"></i> Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+</body>
+
+</html>
