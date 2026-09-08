@@ -1,15 +1,71 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+# ============================================================
+# WATCHMEN TRACKER — PRODUCTION-GRADE .GITIGNORE
+# ============================================================
+
+# ------------------------------------------------------------
+# Environment & Secrets (CRITICAL SECURITY)
+# ------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+
+# ------------------------------------------------------------
+# Python & Virtual Environments
+# ------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ------------------------------------------------------------
+# Backend Runtime Storage & Local Databases
+# ------------------------------------------------------------
+backend/uploads/
+backend/incidents/
+backend/videos/
+backend/bugs/
+*.db
+*.sqlite
+*.sqlite3
+*.log
+backend/static/*.bak
+
+# ------------------------------------------------------------
+# Android / Gradle Build Artifacts
+# ------------------------------------------------------------
+.gradle/
+build/
+app/build/
 local.properties
+/local.properties
+*.apk
+*.aar
+*.aab
+.externalNativeBuild/
+.cxx/
+captures/
+
+# ------------------------------------------------------------
+# IDE, Editor & Workspaces
+# ------------------------------------------------------------
+.idea/
+.vscode/
+*.iml
+
+# ------------------------------------------------------------
+# OS & System Files
+# ------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini

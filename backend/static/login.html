@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Sign In | Watchmen Elite Command & Control</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Watchmen Elite Design System -->
+    <link rel="stylesheet" href="/static/css/watchmen-elite.css?v=3.0">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <!-- Brand & Title Header -->
+        <div class="auth-header">
+            <div class="auth-brand-badge">DWEX SECURITY</div>
+            <h1 class="auth-title">Watchmen Elite</h1>
+            <p class="auth-subtitle">Sign in to access Command & Control Center</p>
+        </div>
+
+        <!-- Auth Card -->
+        <div class="auth-card">
+            <!-- Alert Banner -->
+            <div id="loginAlert" class="auth-alert" style="display: none;">
+                <i class="fas fa-exclamation-circle" id="loginAlertIcon"></i>
+                <span id="loginAlertText"></span>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label for="loginEmail">EMAIL ADDRESS</label>
+                    <div class="auth-input-wrapper">
+                        <i class="fas fa-envelope auth-input-icon"></i>
+                        <input type="email" id="loginEmail" class="form-input" placeholder="user@example.com" required autocomplete="email">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="loginPassword">PASSWORD</label>
+                    <div class="auth-input-wrapper">
+                        <i class="fas fa-lock auth-input-icon"></i>
+                        <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required autocomplete="current-password">
+                        <button type="button" class="auth-toggle-pwd" id="togglePasswordBtn" title="Toggle password visibility">
+                            <i class="fas fa-eye" id="togglePasswordIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" id="loginSubmitBtn" class="btn-saas btn-saas-primary auth-submit-btn">
+                    <span>Sign In</span> <i class="fas fa-arrow-right"></i>
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                Don't have an account? <a href="/signup">Sign Up</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Redirect if already authenticated
+            if (localStorage.getItem('watchmen_access_token')) {
+                window.location.href = '/';
+                return;
+            }
+
+            const loginForm = document.getElementById('loginForm');
+            const loginEmail = document.getElementById('loginEmail');
+            const loginPassword = document.getElementById('loginPassword');
+            const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+            const loginAlert = document.getElementById('loginAlert');
+            const loginAlertText = document.getElementById('loginAlertText');
+            const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+            const togglePasswordIcon = document.getElementById('togglePasswordIcon');
+
+            // Password visibility toggle
+            togglePasswordBtn.addEventListener('click', () => {
+                const type = loginPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+                loginPassword.setAttribute('type', type);
+                togglePasswordIcon.className = type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+            });
+
+            function showAlert(message, type = 'danger') {
+                loginAlertText.textContent = message;
+                loginAlert.className = `auth-alert ${type === 'success' ? 'success' : ''}`;
+                loginAlert.style.display = 'flex';
+            }
+
+            function hideAlert() {
+                loginAlert.style.display = 'none';
+            }
+
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                hideAlert();
+
+                const email = loginEmail.value.trim();
+                const password = loginPassword.value;
+
+                if (!email || !password) {
+                    showAlert('Please enter both email and password.');
+                    return;
+                }
+
+                // Loading State
+                loginSubmitBtn.disabled = true;
+                loginSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
+
+                try {
+                    const response = await fetch('/auth/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ email, password })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        // Persist session tokens and user info
+                        localStorage.setItem('watchmen_access_token', data.access_token);
+                        localStorage.setItem('watchmen_refresh_token', data.refresh_token);
+                        localStorage.setItem('watchmen_user', JSON.stringify(data.user));
+
+                        // Success transition
+                        showAlert('Sign in successful! Redirecting to Command Center...', 'success');
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 500);
+                    } else {
+                        loginSubmitBtn.disabled = false;
+                        loginSubmitBtn.innerHTML = '<span>Sign In</span> <i class="fas fa-arrow-right"></i>';
+
+                        if (response.status === 401) {
+                            showAlert('Invalid email or password.');
+                        } else if (response.status === 403) {
+                            showAlert('User account is inactive. Please contact your administrator.');
+                        } else if (data.detail) {
+                            showAlert(data.detail);
+                        } else {
+                            showAlert('Authentication failed. Please try again.');
+                        }
+                    }
+                } catch (err) {
+                    console.error('Login error:', err);
+                    loginSubmitBtn.disabled = false;
+                    loginSubmitBtn.innerHTML = '<span>Sign In</span> <i class="fas fa-arrow-right"></i>';
+                    showAlert('Unable to connect to the server. Please check your connection.');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

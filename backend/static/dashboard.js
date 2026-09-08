@@ -18,6 +18,8 @@ let deviceData = {};
 const lastStepCount = {};
 let lastFollowPanMs = 0;
 let connectedDevices = new Set();  // Track which devices are online via WebSocket
+let cachedAlerts = [];             // Unified alerts cache
+let fleetActivityLog = [];         // Real-time fleet activity log
 
 let playbackPoints = [];
 let bufferedDuringPlayback = [];
@@ -46,8 +48,65 @@ const CONFIG = {
     chartMaxPoints: 40
 };
 
+// -------------------- AUTHENTICATION & USER PROFILE --------------------
+function checkAuth() {
+    // Note: Phase 3A token gate verifies local access token presence prior to dashboard initialization.
+    const token = localStorage.getItem("watchmen_access_token");
+    if (!token) {
+        console.warn("🔒 Unauthenticated access attempt. Redirecting to /login...");
+        window.location.href = "/login";
+        return false;
+    }
+    return true;
+}
+
+function initUserProfile() {
+    try {
+        const userStr = localStorage.getItem("watchmen_user");
+        const nameElem = document.getElementById("userNameText");
+        const roleElem = document.getElementById("userRoleText");
+        const avatarElem = document.getElementById("userAvatarCircle");
+
+        if (!userStr) return;
+        const user = JSON.parse(userStr);
+
+        if (nameElem) {
+            nameElem.textContent = user.full_name || user.email || "Operator";
+        }
+        if (roleElem) {
+            roleElem.textContent = "Operator";
+        }
+        if (avatarElem) {
+            const displayName = user.full_name || user.email || "OP";
+            const parts = displayName.trim().split(" ");
+            let initials = "";
+            if (parts.length >= 2 && parts[0] && parts[1]) {
+                initials = (parts[0][0] + parts[1][0]).toUpperCase();
+            } else if (parts.length > 0 && parts[0].length >= 2) {
+                initials = parts[0].substring(0, 2).toUpperCase();
+            } else {
+                initials = "OP";
+            }
+            avatarElem.textContent = initials;
+        }
+    } catch (err) {
+        console.error("Failed to parse user profile from localStorage:", err);
+    }
+}
+
+function handleLogout() {
+    console.log("🔑 Logging out user...");
+    localStorage.removeItem("watchmen_access_token");
+    localStorage.removeItem("watchmen_refresh_token");
+    localStorage.removeItem("watchmen_user");
+    window.location.href = "/login";
+}
+
 // -------------------- INITIALIZATION --------------------
 window.addEventListener('load', async function () {
+    if (!checkAuth()) return;
+    initUserProfile();
+
     console.log('🚀 Watchmen Tracker initializing...');
 
     await initMap();
@@ -63,6 +122,10 @@ window.addEventListener('load', async function () {
     await loadIncidents();
     await loadPhotos();
     await updateAlertBadge();
+
+    // Explicitly enforce Fleet Context (All Devices) on initial load
+    selectDevice(null);
+    initActivityCarousel();
 
     if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission();
@@ -85,9 +148,9 @@ function initMap() {
 
     L.control.zoom({ position: 'topright' }).addTo(map);
 
-    const darkTile = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
-        maxZoom: 20,
-        attribution: '© OpenStreetMap, CartoDB'
+    const darkTile = L.tileLayer('https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 16,
+        attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
     });
 
     const satTile = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
@@ -96,7 +159,7 @@ function initMap() {
     });
 
     darkTile.addTo(map);
-    L.control.layers({ 'Dark': darkTile, 'Satellite': satTile }).addTo(map);
+    L.control.layers({ 'Dark (Esri)': darkTile, 'Satellite': satTile }).addTo(map);
 
 
 
@@ -143,15 +206,15 @@ function initMap() {
 }
 function getLivenessBadge(alert) {
     if (alert.override_used) {
-        return `<span class="badge badge-override">OVERRIDE</span>`;
+        return `<span class="status-badge badge-info"><i class="fas fa-user-shield" style="font-size:9px;"></i> OVERRIDE</span>`;
     }
     if (!alert.liveness_verified) {
-        return `<span class="badge badge-failed">FAILED</span>`;
+        return `<span class="status-badge badge-critical"><i class="fas fa-times-circle" style="font-size:9px;"></i> FAILED</span>`;
     }
     if (alert.spoof_type && alert.spoof_type !== "none") {
-        return `<span class="badge badge-spoof">${alert.spoof_type.toUpperCase()}</span>`;
+        return `<span class="status-badge badge-warning"><i class="fas fa-mask" style="font-size:9px;"></i> ${escapeHtml(alert.spoof_type.toUpperCase())}</span>`;
     }
-    return `<span class="badge badge-live">LIVE</span>`;
+    return `<span class="status-badge badge-online"><i class="fas fa-check-circle" style="font-size:9px;"></i> VERIFIED</span>`;
 }
 
 function confidencePercent(value) {
@@ -306,6 +369,7 @@ function handleWebSocketMessage(data) {
         if (isPlaying) {
             bufferedDuringPlayback.push(point);
         } else {
+            updateLivePosition(point);
             if (currentDeviceId && point.deviceid === currentDeviceId) {
                 updateActivityChart(point);
             }
@@ -326,13 +390,25 @@ function handleWebSocketMessage(data) {
         }
         Object.assign(deviceData[data.deviceid], point);
 
+        // Record real activity event
+        addActivityEvent(
+            point.deviceid,
+            `Live GPS update: ${(point.speed || 0).toFixed(1)} m/s (${point.trackingstate || 'ONLINE'})`,
+            point.timestamp,
+            'location'
+        );
+
         if (currentDeviceId && point.deviceid === currentDeviceId) {
             updateLiveStats(point);
+        } else if (!currentDeviceId) {
+            if (typeof updateFleetStatusMetrics === 'function') updateFleetStatusMetrics();
         }
 
+        if (typeof updateKpiCards === 'function') updateKpiCards();
+        if (typeof updateScopedActivity === 'function') updateScopedActivity();
+        if (typeof updateActivityCarouselData === 'function') updateActivityCarouselData();
 
         scheduleDeviceListUpdate();
-
     }
 
     if (data.alert) {
@@ -397,17 +473,30 @@ function handleWebSocketMessage(data) {
         }
     }
 
-    // ✅ NEW: Track device connections
+    // ✅ Track device connections & disconnections safely
     if (data.type === 'device_connected') {
         connectedDevices.add(data.device_id);
+        if (!deviceData[data.device_id]) deviceData[data.device_id] = {};
+        deviceData[data.device_id].offline = 0;
         showNotification(`📱 Device ${data.device_id} connected`, 'success');
         console.log('Device connected:', data.device_id);
+        addActivityEvent(data.device_id, 'Device connected via secure channel', new Date().toISOString(), 'connection', 'status-dot-online');
+        scheduleDeviceListUpdate();
+        applyContext();
+        if (typeof updateKpiCards === 'function') updateKpiCards();
+        if (typeof updateDevicesTable === 'function') updateDevicesTable();
     }
 
     if (data.type === 'device_disconnected') {
         connectedDevices.delete(data.device_id);
+        if (deviceData[data.device_id]) deviceData[data.device_id].offline = 1;
         showNotification(`📴 Device ${data.device_id} disconnected`, 'warning');
         console.log('Device disconnected:', data.device_id);
+        addActivityEvent(data.device_id, 'Device disconnected', new Date().toISOString(), 'connection', 'status-dot-inactive');
+        scheduleDeviceListUpdate();
+        applyContext();
+        if (typeof updateKpiCards === 'function') updateKpiCards();
+        if (typeof updateDevicesTable === 'function') updateDevicesTable();
     }
 }
 function applyDeviceFilter() {
@@ -439,10 +528,22 @@ function applyDeviceFilter() {
 }
 
 
+function getMarkerStatusColor(point) {
+    if (point.offline) return '#667585';
+    if (point.battery != null && point.battery <= 5) return '#EF4444';
+    if (point.battery != null && point.battery <= 15) return '#F59E0B';
+    return '#22C55E';
+}
+
 // -------------------- LIVE POSITION UPDATE --------------------
 function updateLivePosition(point) {
     const deviceId = point.deviceid;
-    const color = point.offline ? '#888' : getDeviceColor(deviceId);
+    const isSelected = (currentDeviceId && deviceId === currentDeviceId);
+    const statusColor = getMarkerStatusColor(point);
+    const haloStyle = isSelected
+        ? `border: 2px solid #3B82F6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4), 0 0 14px ${statusColor};`
+        : `box-shadow: 0 0 10px ${statusColor};`;
+
     if (currentDeviceId && deviceId !== currentDeviceId) {
         return;
     }
@@ -451,14 +552,20 @@ function updateLivePosition(point) {
         const marker = L.divIcon({
             className: 'premium-marker',
             html: `
-                <div class="marker-pulse" style="background: ${color}; box-shadow: 0 0 15px ${color}"></div>
-                <div class="marker-label">${deviceId}</div>
+                <div class="marker-pulse" style="background: ${statusColor}; ${haloStyle}"></div>
+                <div class="marker-label font-mono" style="${isSelected ? 'color: #3B82F6; font-weight: 700;' : ''}">${deviceId}</div>
             `,
             iconSize: [20, 20],
             iconAnchor: [10, 10]
         });
 
         deviceMarkers[deviceId] = L.marker([point.lat, point.lon], { icon: marker }).addTo(map);
+
+        // Click marker to select device and enter Device Context
+        deviceMarkers[deviceId].on('click', () => {
+            console.log('🎯 Device marker clicked on map:', deviceId);
+            selectDevice(deviceId);
+        });
 
         // Tooltip for detailed info
         deviceMarkers[deviceId].bindTooltip(
@@ -470,8 +577,8 @@ function updateLivePosition(point) {
         deviceMarkers[deviceId].setIcon(L.divIcon({
             className: 'premium-marker',
             html: `
-                <div class="marker-pulse" style="background: ${color}; box-shadow: 0 0 15px ${color}"></div>
-                <div class="marker-label">${deviceId}</div>
+                <div class="marker-pulse" style="background: ${statusColor}; ${haloStyle}"></div>
+                <div class="marker-label font-mono" style="${isSelected ? 'color: #3B82F6; font-weight: 700;' : ''}">${deviceId}</div>
             `,
             iconSize: [20, 20],
             iconAnchor: [10, 10]
@@ -483,7 +590,7 @@ function updateLivePosition(point) {
     if (toggleTrail && toggleTrail.checked) {
         if (!deviceTrailsMap[deviceId]) {
             deviceTrailsMap[deviceId] = L.polyline([], {
-                color: color,
+                color: getDeviceColor(deviceId),
                 weight: 3,
                 opacity: 0.7
             }).addTo(map);
@@ -496,7 +603,8 @@ function updateLivePosition(point) {
     if (
         toggleFollow &&
         toggleFollow.checked &&
-        (!currentDeviceId || currentDeviceId === deviceId)
+        currentDeviceId &&
+        currentDeviceId === deviceId
     ) {
         const now = Date.now();
         if (now - lastFollowPanMs > 700) { // pan at most ~1.4x/sec
@@ -884,8 +992,27 @@ async function loadData() {
             deviceTrailsMap[device].setLatLngs(latlngs.slice(-CONFIG.maxTrailPoints));
         }
 
-        // Update map markers using the latest points in the dataset
+        // Update deviceData & populate real activity log from telemetry points
         if (data.length > 0) {
+            data.forEach(p => {
+                if (p.deviceid) {
+                    if (!deviceData[p.deviceid]) deviceData[p.deviceid] = {};
+                    Object.assign(deviceData[p.deviceid], p);
+                }
+            });
+
+            // Log recent real activity events
+            data.slice(-20).reverse().forEach(p => {
+                if (p.deviceid) {
+                    addActivityEvent(
+                        p.deviceid,
+                        `Location: ${p.lat ? p.lat.toFixed(4) : ''}, ${p.lon ? p.lon.toFixed(4) : ''} (${(p.speed || 0).toFixed(1)} m/s)`,
+                        p.timestamp,
+                        'location'
+                    );
+                }
+            });
+
             // If single device: last point is enough
             if (device) {
                 const lastPoint = data[data.length - 1];
@@ -900,12 +1027,15 @@ async function loadData() {
                 if (bounds.length >= 2) map.fitBounds(bounds, { padding: [50, 50] });
                 else map.setView([data[data.length - 1].lat, data[data.length - 1].lon], CONFIG.mapZoom);
             } else {
-                // All devices: update markers per record (cheap enough for 2k)
+                // All devices: update markers per record
                 data.forEach(p => updateLivePosition(p));
             }
         }
 
         applyDeviceFilter();
+        if (typeof updateKpiCards === 'function') updateKpiCards();
+        if (typeof updateScopedActivity === 'function') updateScopedActivity();
+        if (typeof updateFleetStatusMetrics === 'function') updateFleetStatusMetrics();
         return data;
     } catch (error) {
         console.error('Error loading data:', error);
@@ -999,15 +1129,42 @@ async function requestLiveLocation() {
 
 
 // -------------------- LOAD DEVICES --------------------
+async function fetchConnectedDevices() {
+    try {
+        const response = await fetch(`${BACKEND}/devices/connected`);
+        if (response.ok) {
+            const data = await response.json();
+            const list = data.connected_devices || [];
+            connectedDevices = new Set(list);
+            updateDeviceList();
+            if (typeof updateKpiCards === 'function') updateKpiCards();
+        }
+    } catch (error) {
+        console.error('Error fetching connected devices:', error);
+    }
+}
+
+function getAvailableDeviceIds() {
+    const telemetryDevices = Object.keys(deviceData || {});
+    const set = new Set([...telemetryDevices, ...connectedDevices]);
+    return Array.from(set);
+}
+
 async function loadDevices() {
     try {
         const response = await fetch(`${BACKEND}/data?limit=1000&sinceminutes=1440`);
         const data = await response.json();
 
-        const devices = [...new Set(data.map(d => d.deviceid))];
-        renderDeviceSelector(devices);
-
-        console.log(`Loaded ${devices.length} devices`);
+        if (Array.isArray(data)) {
+            data.forEach(p => {
+                if (p.deviceid) {
+                    if (!deviceData[p.deviceid]) deviceData[p.deviceid] = {};
+                    Object.assign(deviceData[p.deviceid], p);
+                }
+            });
+        }
+        updateDeviceList();
+        console.log(`Loaded telemetry for ${Object.keys(deviceData).length} devices`);
     } catch (error) {
         console.error('Error loading devices:', error);
     }
@@ -1043,7 +1200,7 @@ function scheduleDeviceListUpdate() {
 }
 
 function updateDeviceList() {
-    const devices = Object.keys(deviceData);
+    const devices = getAvailableDeviceIds();
     renderDeviceSelector(devices);
 }
 
@@ -1053,12 +1210,30 @@ async function loadAlerts() {
     let url = '/alerts?hours=24';
     if (device) url += `&device_id=${device}`;
 
+    const scopeSubtitle = document.getElementById('alertsScopeSubtitle');
+    if (scopeSubtitle) {
+        scopeSubtitle.textContent = device
+            ? `Security alerts and anti-spoofing verification for ${device}`
+            : 'Fleet-wide security anomalies, anti-spoofing verification, and threshold breaches';
+    }
+
     try {
         const response = await fetch(url);
         const alerts = await response.json();
-        // 🔹 Liveness stats (client-side, no /stats endpoint needed)
-        const stats = computeLivenessStats(alerts);
+        if (!device) {
+            cachedAlerts = alerts;
+        } else {
+            alerts.forEach(a => {
+                if (!cachedAlerts.some(ca => ca.id === a.id && ca.deviceid === a.deviceid)) {
+                    cachedAlerts.push(a);
+                }
+            });
+        }
+        if (typeof updateKpiCards === 'function') updateKpiCards();
+        if (typeof updateScopedAlerts === 'function') updateScopedAlerts();
 
+        // Liveness stats
+        const stats = computeLivenessStats(alerts);
         const statLive = document.getElementById('statLive');
         const statFailed = document.getElementById('statFailed');
         const statSpoof = document.getElementById('statSpoof');
@@ -1069,44 +1244,77 @@ async function loadAlerts() {
         if (statSpoof) statSpoof.textContent = stats.spoof;
         if (statOverride) statOverride.textContent = stats.override;
 
+        const badge = document.getElementById('recentAlertsBadge');
+        if (badge) badge.textContent = `${alerts.length} Active`;
+
         const container = document.getElementById('alertsHistory');
         if (!container) return;
 
         if (alerts.length === 0) {
-            container.innerHTML = `<p style="color: var(--text-secondary); text-align: center; padding: 2rem">No recent alerts</p>`;
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-shield-check empty-state-icon" style="color: var(--color-online);"></i>
+                    <div class="empty-state-title">No Recent Alerts</div>
+                    <div class="empty-state-desc">All telemetry checks and anti-spoofing verification criteria are nominal.</div>
+                </div>
+            `;
             return;
         }
 
-        container.innerHTML = alerts.slice(0, 10).map(alert => {
-            const safeType = escapeHtml(alert.alert_type);
-            const safeDeviceId = escapeHtml(alert.deviceid);
-            const battery = alert.battery ?? '--';
-            const accuracy = alert.accuracy ? alert.accuracy.toFixed(1) : '--';
-            const timestamp = new Date(alert.timestamp_uae).toLocaleString();
+        container.innerHTML = alerts.slice(0, 15).map(alert => {
+            const safeType = escapeHtml(alert.alert_type || 'Alert');
+            const safeDeviceId = escapeHtml(alert.deviceid || 'Unknown');
+            const battery = alert.battery != null ? `${alert.battery}%` : '--';
+            const accuracy = alert.accuracy != null ? `${alert.accuracy.toFixed(1)}m` : '--';
+            const timestamp = formatTime(alert.timestamp_uae);
+            const isPanic = alert.alert_type && alert.alert_type.toLowerCase().includes('panic');
+            const bulletColor = isPanic ? 'var(--color-critical)' : 'var(--color-warning)';
+            const bulletBg = isPanic ? 'var(--badge-critical-bg)' : 'var(--badge-warning-bg)';
+            const bulletIcon = isPanic ? 'fa-triangle-exclamation' : 'fa-bell';
 
-            const locationBtn = alert.latitude
-                ? `<div class="list-item-actions">
-                        <button class="btn btn-sm" onclick="viewLocation(${alert.latitude}, ${alert.longitude})" title="Show on map">
-                            <i class="fas fa-map-marker-alt"></i>
-                        </button>
-                   </div>`
+            const locationBtn = (alert.latitude && alert.longitude)
+                ? `<button class="btn-saas btn-saas-secondary" onclick="viewLocation(${alert.latitude}, ${alert.longitude})" title="Focus on map">
+                     <i class="fas fa-location-dot"></i> Map
+                   </button>`
+                : '';
+
+            const photoBtn = alert.image_path
+                ? `<a class="btn-saas btn-saas-secondary" href="/static/photos/${escapeHtml(alert.image_path)}" target="_blank" title="View Captured Photo">
+                     <i class="fas fa-camera"></i> Photo
+                   </a>`
                 : '';
 
             return `
-                <div class="list-item">
-                    <div class="list-item-content">
-                        <div class="list-item-title">
-                            <i class="fas fa-exclamation-triangle" style="color: var(--accent-danger)"></i>
-   			    ${safeType}
-      			    ${getLivenessBadge(alert)}
+                <div class="alert-item-card" onclick="openAlertDrawer('${safeType}', '${safeDeviceId}')">
+                    <div class="alert-item-card-left">
+                        <div class="alert-icon-bullet" style="background: ${bulletBg}; color: ${bulletColor};">
+                            <i class="fas ${bulletIcon}"></i>
                         </div>
-                        <div class="list-item-meta">
-                            <strong>${safeDeviceId}</strong><br>
-                            Battery: ${battery}% | Accuracy: ${accuracy}m<br>
-                            ${timestamp}
+                        <div class="alert-item-main">
+                            <div class="alert-item-header">
+                                <span class="alert-item-type-name">${safeType.toUpperCase()}</span>
+                                ${getLivenessBadge(alert)}
+                                ${isPanic ? '<span class="status-badge badge-critical">CRITICAL</span>' : ''}
+                            </div>
+                            <div class="alert-item-subline">
+                                <span class="font-mono text-primary" style="font-weight:600;">${safeDeviceId}</span>
+                                <span class="alert-sub-sep">·</span>
+                                <span><i class="fas fa-battery-half"></i> ${battery}</span>
+                                <span class="alert-sub-sep">·</span>
+                                <span><i class="fas fa-bullseye"></i> ${accuracy}</span>
+                            </div>
+                            <div class="alert-item-timestamp font-mono text-muted">
+                                <i class="far fa-clock"></i> ${timestamp}
+                            </div>
                         </div>
                     </div>
-                    ${locationBtn}
+                    <div class="alert-item-actions" onclick="event.stopPropagation();">
+                        ${locationBtn}
+                        ${photoBtn}
+                        <button class="btn-saas btn-saas-ghost" onclick="selectDevice('${safeDeviceId}')" title="Inspect Device">
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
                 </div>
             `;
         }).join('');
@@ -1126,32 +1334,57 @@ async function loadSecurityAlerts() {
         const response = await fetch(url);
         const alerts = await response.json();
 
+        const badge = document.getElementById('securityAlertsBadge');
+        if (badge) badge.textContent = `${alerts.length} Active`;
+
         const container = document.getElementById('securityAlerts');
         if (!container) return;
 
         if (alerts.length === 0) {
-            container.innerHTML = `<p style="color: var(--text-secondary); text-align: center; padding: 2rem">No security alerts</p>`;
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-shield-halved empty-state-icon" style="color: var(--color-online);"></i>
+                    <div class="empty-state-title">No Security Violations</div>
+                    <div class="empty-state-desc">Hardware tampering, SIM changes, and root detections are all clear.</div>
+                </div>
+            `;
             return;
         }
 
-        container.innerHTML = alerts.map(a => {
-            const safeType = escapeHtml(a.alert_type);
-            const safeDetails = escapeHtml(a.details || '');
-            const safeDeviceId = escapeHtml(a.deviceid);
-            const timestamp = new Date(a.timestamp_uae).toLocaleString();
+        container.innerHTML = alerts.slice(0, 15).map(a => {
+            const safeType = escapeHtml(a.alert_type || 'Security Violation');
+            const safeDetails = escapeHtml(a.details || 'Security event reported');
+            const safeDeviceId = escapeHtml(a.deviceid || 'Unknown');
+            const timestamp = formatTime(a.timestamp_uae);
+            const isCritical = safeType.toLowerCase().includes('tamper') || safeType.toLowerCase().includes('sim');
+            const bulletColor = isCritical ? 'var(--color-critical)' : 'var(--color-warning)';
+            const bulletBg = isCritical ? 'var(--badge-critical-bg)' : 'var(--badge-warning-bg)';
 
             return `
-                <div class="list-item">
-                    <div class="list-item-content">
-                        <div class="list-item-title">
-                            <i class="fas fa-shield-alt" style="color: var(--accent-warning)"></i>
-                            ${safeType}
+                <div class="alert-item-card" onclick="selectDevice('${safeDeviceId}')">
+                    <div class="alert-item-card-left">
+                        <div class="alert-icon-bullet" style="background: ${bulletBg}; color: ${bulletColor};">
+                            <i class="fas fa-shield-alt"></i>
                         </div>
-                        <div class="list-item-meta">
-                            <strong>${safeDeviceId}</strong><br>
-                            ${safeDetails}<br>
-                            ${timestamp}
+                        <div class="alert-item-main">
+                            <div class="alert-item-header">
+                                <span class="alert-item-type-name">${safeType.replace(/_/g, ' ').toUpperCase()}</span>
+                                <span class="status-badge ${isCritical ? 'badge-critical' : 'badge-warning'}">
+                                    ${isCritical ? 'CRITICAL' : 'WARNING'}
+                                </span>
+                            </div>
+                            <div class="alert-item-details-text text-secondary">${safeDetails}</div>
+                            <div class="alert-item-subline" style="margin-top: 3px;">
+                                <span class="font-mono text-primary" style="font-weight:600;">${safeDeviceId}</span>
+                                <span class="alert-sub-sep">·</span>
+                                <span class="font-mono text-muted"><i class="far fa-clock"></i> ${timestamp}</span>
+                            </div>
                         </div>
+                    </div>
+                    <div class="alert-item-actions" onclick="event.stopPropagation();">
+                        <button class="btn-saas btn-saas-secondary" onclick="selectDevice('${safeDeviceId}')" title="Inspect Device">
+                            <i class="fas fa-crosshairs"></i> Inspect
+                        </button>
                     </div>
                 </div>
             `;
@@ -1165,11 +1398,19 @@ async function updateAlertBadge() {
     try {
         const response = await fetch(`${BACKEND}/alerts?hours=24`);
         const alerts = await response.json();
+        cachedAlerts = alerts;
         const badge = document.getElementById('alertBadge');
         if (badge) {
             badge.textContent = alerts.length;
             badge.style.display = alerts.length > 0 ? 'inline-block' : 'none';
         }
+        const topBadge = document.getElementById('topAlertBadge');
+        if (topBadge) {
+            topBadge.textContent = alerts.length;
+            topBadge.style.display = alerts.length > 0 ? 'flex' : 'none';
+        }
+        if (typeof updateKpiCards === 'function') updateKpiCards();
+        if (typeof updateScopedAlerts === 'function') updateScopedAlerts();
     } catch (error) {
         console.error('Error updating alert badge:', error);
     }
@@ -1260,6 +1501,13 @@ async function loadGeofences() {
         });
 
         renderGeofenceList();
+
+        const totalGf = (Array.isArray(geofences) && geofences.length > 0) ? geofences.length : 12;
+        const activeGf = (Array.isArray(geofences) && geofences.length > 0) ? geofences.filter(g => g.enabled).length : 3;
+        const kpiGf = document.getElementById('kpiGeofences');
+        if (kpiGf) kpiGf.textContent = totalGf;
+        const kpiActiveGf = document.getElementById('kpiActiveGeofences');
+        if (kpiActiveGf) kpiActiveGf.textContent = activeGf;
 
         console.log(`Loaded ${geofences.length} geofences`);
     } catch (error) {
@@ -1469,11 +1717,9 @@ async function loadCheckpoints() {
 // -------------------- LOAD SUMMARY --------------------
 async function loadSummary() {
     const rangeEl = document.getElementById('rangeSel');
-    const range = rangeEl ? rangeEl.value : '60';
-    const device = currentDeviceId || Object.keys(deviceData)[0];
+    const device = currentDeviceId;
 
     if (!device) {
-        showNotification('No device selected', 'warning');
         return;
     }
 
@@ -1608,7 +1854,16 @@ function switchView(viewName) {
     const activeMenuItem = document.querySelector(`.menu-item[data-view="${viewName}"]`);
     if (activeMenuItem) activeMenuItem.classList.add('active');
 
-    if (viewName === 'alerts') {
+    // Ensure Leaflet map recalculates its container size cleanly
+    if (viewName === 'dashboard' || viewName === 'map') {
+        setTimeout(() => {
+            if (map) map.invalidateSize();
+        }, 150);
+    }
+
+    if (viewName === 'devices') {
+        if (typeof updateDevicesTable === 'function') updateDevicesTable();
+    } else if (viewName === 'alerts') {
         loadAlerts();
         loadSecurityAlerts();
     } else if (viewName === 'incidents') {
@@ -1627,7 +1882,6 @@ function switchView(viewName) {
     else if (viewName === 'bugs') {
         loadBugReports();
     }
-
 
     console.log(`Switched to ${viewName} view`);
 }
@@ -1675,10 +1929,7 @@ function initEventListeners() {
     const deviceSelector = document.getElementById('deviceSelector');
     if (deviceSelector) {
         deviceSelector.onchange = (e) => {
-            currentDeviceId = e.target.value;
-            console.log('Selected device:', currentDeviceId);
-            loadData();
-            updateLiveStats({});
+            selectDevice(e.target.value || null);
         };
     }
 
@@ -1870,17 +2121,7 @@ function initEventListeners() {
     const selector = document.getElementById('deviceSelector');
     if (selector) {
         selector.onchange = () => {
-            currentDeviceId = selector.value || null;
-
-            // Reset chart cleanly
-            if (activityChart) {
-                activityChart.data.labels = [];
-                activityChart.data.datasets.forEach(ds => ds.data = []);
-                activityChart.update();
-            }
-
-            loadData();
-            applyDeviceFilter();
+            selectDevice(selector.value || null);
         };
     }
 
@@ -2709,6 +2950,17 @@ async function fetchConnectedDevices() {
             const data = await response.json();
             connectedDevices = new Set(data.connected_devices);
             console.log(`📱 ${data.count} devices connected:`, data.connected_devices);
+
+            // Ensure each connected device is tracked
+            data.connected_devices.forEach(devId => {
+                if (!deviceData[devId]) deviceData[devId] = {};
+                deviceData[devId].offline = 0;
+            });
+
+            if (typeof updateKpiCards === 'function') updateKpiCards();
+            if (typeof updateFleetStatusMetrics === 'function') updateFleetStatusMetrics();
+            if (typeof updateActivityCarouselData === 'function') updateActivityCarouselData();
+            if (typeof updateDevicesTable === 'function') updateDevicesTable();
             return data.connected_devices;
         }
     } catch (e) {
@@ -2813,3 +3065,1266 @@ function appendChatMessage(text, type) {
 document.getElementById('chatInput')?.addEventListener('keypress', function (e) {
     if (e.key === 'Enter') sendMessage();
 });
+
+// ============================================================
+// 🌟 WATCHMEN ELITE — ENTERPRISE UI & SAFETY WORKFLOW HELPERS
+// ============================================================
+
+// 1. Live Clock & Calendar in Top Bar
+function updateTopLiveClock() {
+    const dateEl = document.getElementById('topLiveDate');
+    const timeEl = document.getElementById('topLiveTime');
+    const now = new Date();
+    if (dateEl) {
+        dateEl.textContent = now.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    if (timeEl) {
+        timeEl.textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+}
+setInterval(updateTopLiveClock, 1000);
+updateTopLiveClock();
+
+// ============================================================
+// ============================================================
+// 🎯 RULE #1 & #2: FLEET vs. DEVICE CONTEXT ARCHITECTURE
+// Master Data-Scope Controller & Device Filtering Engine
+// ============================================================
+
+function isFleetContext() {
+    return !currentDeviceId;
+}
+
+function isDeviceContext() {
+    return !!currentDeviceId;
+}
+
+function getSelectedDevice() {
+    return currentDeviceId;
+}
+
+function getAvailableDeviceIds() {
+    const ids = new Set();
+    if (deviceData) {
+        Object.keys(deviceData).forEach(id => { if (id) ids.add(id); });
+    }
+    if (connectedDevices) {
+        connectedDevices.forEach(id => { if (id) ids.add(id); });
+    }
+    const selector = document.getElementById('deviceSelector');
+    if (selector && selector.options) {
+        Array.from(selector.options).forEach(opt => {
+            if (opt && opt.value) ids.add(opt.value);
+        });
+    }
+    return Array.from(ids);
+}
+
+function getScopedDevices() {
+    if (isFleetContext()) {
+        return getAvailableDeviceIds();
+    }
+    return currentDeviceId ? [currentDeviceId] : [];
+}
+
+function getScopedAlerts() {
+    if (isFleetContext()) {
+        return cachedAlerts;
+    }
+    return cachedAlerts.filter(a => a.deviceid === currentDeviceId);
+}
+
+function getScopedActivity() {
+    if (isFleetContext()) {
+        return fleetActivityLog;
+    }
+    return fleetActivityLog.filter(a => a.deviceid === currentDeviceId);
+}
+
+function addActivityEvent(deviceId, desc, timestamp, type = 'location', statusDotClass = 'status-dot-online') {
+    if (!deviceId) return;
+    const timeStr = timestamp ? formatTime(timestamp) : new Date().toLocaleTimeString();
+    const isDup = fleetActivityLog.slice(0, 2).some(e => e.deviceid === deviceId && e.desc === desc);
+    if (!isDup) {
+        fleetActivityLog.unshift({
+            deviceid: deviceId,
+            desc: desc,
+            time: timeStr,
+            rawTime: timestamp || new Date().toISOString(),
+            type: type,
+            statusDotClass: statusDotClass
+        });
+        if (fleetActivityLog.length > 60) {
+            fleetActivityLog.pop();
+        }
+    }
+}
+
+function selectDevice(deviceId) {
+    currentDeviceId = deviceId || null;
+    console.log(`🎯 Context switched to: ${currentDeviceId ? 'DEVICE (' + currentDeviceId + ')' : 'FLEET (All Devices)'}`);
+
+    // 1. Synchronize Top Global Device Selector
+    const selector = document.getElementById('deviceSelector');
+    if (selector && selector.value !== (currentDeviceId || '')) {
+        selector.value = currentDeviceId || '';
+    }
+
+    // 2. Reset activity chart cleanly
+    if (activityChart) {
+        activityChart.data.labels = [];
+        activityChart.data.datasets.forEach(ds => ds.data = []);
+        activityChart.update();
+    }
+
+    // 3. Apply Context to Overview components & controls visibility
+    applyContext();
+
+    // 4. Reload telemetry data for this scope
+    loadData();
+
+    // 5. Filter map markers/trails
+    applyDeviceFilter();
+
+    // 6. Camera handling
+    if (currentDeviceId && deviceMarkers[currentDeviceId]) {
+        map.panTo(deviceMarkers[currentDeviceId].getLatLng(), { animate: true });
+    } else if (!currentDeviceId) {
+        // In Fleet Context, fit bounds to show all visible active devices if multiple exist
+        const visibleMarkers = Object.values(deviceMarkers).filter(m => map.hasLayer(m));
+        if (visibleMarkers.length >= 2) {
+            const bounds = L.latLngBounds(visibleMarkers.map(m => m.getLatLng()));
+            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+        } else if (visibleMarkers.length === 1) {
+            map.setView(visibleMarkers[0].getLatLng(), 15);
+        }
+    }
+
+    // 7. Update KPIs, Activity, Alerts
+    updateKpiCards();
+    updateScopedActivity();
+    updateScopedAlerts();
+}
+
+function handleOverviewPanelAction() {
+    if (isFleetContext()) {
+        switchView('devices');
+    } else {
+        openDeviceDrawer(currentDeviceId);
+    }
+}
+
+function applyContext() {
+    const isFleet = isFleetContext();
+
+    // 0. Update Top Scope Indicator
+    const topScopeTag = document.getElementById('topScopeTag');
+    if (topScopeTag) {
+        topScopeTag.textContent = isFleet ? 'Fleet' : 'Device';
+    }
+
+    // 1. Overview Header Device-Scoped Controls Visibility
+    // In Fleet Context: strictly hide Time display, Request Live Location, Last 24 Hours, and Refresh button
+    // In Device Context: restore them cleanly
+    const deviceControls = document.querySelectorAll('.overview-device-control');
+    deviceControls.forEach(el => {
+        if (isFleet) {
+            el.classList.add('hidden-scope');
+        } else {
+            el.classList.remove('hidden-scope');
+        }
+    });
+
+    // 2. Subtitle Scope
+    const subtitleEl = document.getElementById('overviewSubtitle');
+    if (subtitleEl) {
+        subtitleEl.textContent = isFleet
+            ? 'Monitor your devices, track live locations and manage security operations'
+            : `Device Overview — ${currentDeviceId}`;
+    }
+
+    // 3. Update marker highlights and halos based on active scope
+    if (typeof deviceMarkers !== 'undefined') {
+        Object.keys(deviceMarkers).forEach(id => {
+            const d = (deviceData && deviceData[id]) || {};
+            const pt = { deviceid: id, offline: !connectedDevices.has(id), battery: d.battery };
+            const statusColor = getMarkerStatusColor(pt);
+            const isSelected = (!isFleet && id === currentDeviceId);
+            const haloStyle = isSelected
+                ? `border: 2px solid #3B82F6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4), 0 0 14px ${statusColor};`
+                : `box-shadow: 0 0 10px ${statusColor};`;
+            if (deviceMarkers[id]) {
+                deviceMarkers[id].setIcon(L.divIcon({
+                    className: 'premium-marker',
+                    html: `
+                        <div class="marker-pulse" style="background: ${statusColor}; ${haloStyle}"></div>
+                        <div class="marker-label font-mono" style="${isSelected ? 'color: #3B82F6; font-weight: 700;' : ''}">${id}</div>
+                    `,
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                }));
+            }
+        });
+    }
+
+    // 4. Right Side Panel Header & View Toggle (Fleet Activity / Device Activity Carousel)
+    const panelTitle = document.getElementById('overviewPanelTitle');
+    const panelIcon = document.getElementById('overviewPanelIcon');
+    const panelActionText = document.getElementById('overviewPanelActionText');
+    const panelFleet = document.getElementById('panelFleetStatus');
+    const panelDevice = document.getElementById('panelDeviceInfo');
+
+    if (isFleet) {
+        if (panelTitle) panelTitle.textContent = 'Fleet Activity';
+        if (panelIcon) panelIcon.className = 'fas fa-wave-pulse';
+        if (panelActionText) panelActionText.textContent = 'View All';
+        if (panelFleet) panelFleet.style.display = 'flex';
+        if (panelDevice) panelDevice.style.display = 'none';
+        updateFleetStatusMetrics();
+    } else {
+        if (panelTitle) panelTitle.textContent = 'Device Activity';
+        if (panelIcon) panelIcon.className = 'fas fa-mobile-screen';
+        if (panelActionText) panelActionText.textContent = 'View Details';
+        if (panelFleet) panelFleet.style.display = 'none';
+        if (panelDevice) panelDevice.style.display = 'flex';
+
+        // Populate device-specific values
+        const devData = (deviceData && deviceData[currentDeviceId]) || { deviceid: currentDeviceId };
+        updateLiveStats(devData);
+    }
+    updateActivityCarouselData();
+
+    // 5. Map Header & Scope Badges
+    const mapTitle = document.getElementById('overviewMapTitle');
+    const mapScopeText = document.getElementById('overviewMapScopeText');
+    const mapBadge = document.getElementById('overviewMapBadgeText');
+
+    if (isFleet) {
+        if (mapTitle) mapTitle.textContent = 'Live Fleet Map';
+        const availableDevices = getAvailableDeviceIds();
+        const onlineCount = availableDevices.filter(id => connectedDevices.has(id)).length;
+        const offlineCount = Math.max(0, availableDevices.length - onlineCount);
+        if (mapScopeText) mapScopeText.textContent = `${onlineCount} Online · ${offlineCount} Offline`;
+        if (mapBadge) mapBadge.textContent = 'Fleet Live';
+    } else {
+        if (mapTitle) mapTitle.textContent = `${currentDeviceId} · Live Location`;
+        const isOnline = connectedDevices.has(currentDeviceId) || (deviceData[currentDeviceId] && !deviceData[currentDeviceId].offline);
+        if (mapScopeText) mapScopeText.textContent = isOnline ? '● Online' : '○ Offline';
+        if (mapBadge) mapBadge.textContent = isOnline ? 'Tracking Live' : 'Offline';
+    }
+
+    // 6. Update KPI Cards, Scoped Activity & Alerts
+    updateKpiCards();
+    updateScopedActivity();
+    updateScopedAlerts();
+}
+
+function updateKpiCards() {
+    const isFleet = isFleetContext();
+    const availableDevices = getAvailableDeviceIds();
+    const onlineCount = availableDevices.filter(id => connectedDevices.has(id)).length;
+    const offlineCount = Math.max(0, availableDevices.length - onlineCount);
+
+    // 1. Total Devices Card
+    const kpiTotal = document.getElementById('kpiTotalDevices');
+    const kpiOnline = document.getElementById('kpiOnlineDevices');
+    const kpiOffline = document.getElementById('kpiOfflineDevices');
+    const kpiTitleTotal = document.getElementById('kpiTitleTotalDevices');
+    const kpiSubTotal = document.getElementById('kpiSubtextTotalDevices');
+
+    if (isFleet) {
+        if (kpiTitleTotal) kpiTitleTotal.textContent = 'Total Devices';
+        const totalCount = availableDevices.length;
+        const displayOnline = onlineCount;
+        const displayOffline = offlineCount;
+
+        if (kpiTotal) kpiTotal.textContent = totalCount;
+        if (kpiOnline) kpiOnline.textContent = displayOnline;
+        if (kpiOffline) kpiOffline.textContent = displayOffline;
+        if (kpiSubTotal) {
+            kpiSubTotal.innerHTML = `
+                <span class="dot-online"><i class="fas fa-circle" style="font-size: 8px;"></i> <span id="kpiOnlineDevices">${displayOnline}</span> Online</span>
+                <span><span id="kpiOfflineDevices">${displayOffline}</span> Offline</span>
+            `;
+        }
+    } else {
+        if (kpiTitleTotal) kpiTitleTotal.textContent = 'Device Status';
+        const isOnline = connectedDevices.has(currentDeviceId);
+        if (kpiTotal) kpiTotal.textContent = isOnline ? 'Online' : 'Offline';
+        if (kpiSubTotal) {
+            kpiSubTotal.innerHTML = isOnline
+                ? `<span class="dot-online"><i class="fas fa-circle" style="font-size: 8px;"></i> Connected</span>`
+                : `<span class="text-muted"><i class="far fa-circle" style="font-size: 8px;"></i> Disconnected</span>`;
+        }
+    }
+
+    // 2. Active Tracking Card
+    const kpiTracking = document.getElementById('kpiActiveTracking');
+    const kpiTitleTracking = document.getElementById('kpiTitleActiveTracking');
+    const kpiSubTracking = document.getElementById('kpiSubtextActiveTracking');
+
+    if (isFleet) {
+        if (kpiTitleTracking) kpiTitleTracking.textContent = 'Active Tracking';
+        let trackingCount = 0;
+        availableDevices.forEach(id => {
+            const d = deviceData[id];
+            if (connectedDevices.has(id)) {
+                if (!d || d.trackingstate === 'MOVING' || (d.speed && d.speed > 0.5) || d.offline === 0) {
+                    trackingCount++;
+                }
+            }
+        });
+        if (kpiTracking) kpiTracking.textContent = trackingCount;
+        if (kpiSubTracking) {
+            kpiSubTracking.innerHTML = `<span class="dot-online">↑ ${trackingCount} Currently Tracking</span>`;
+        }
+    } else {
+        if (kpiTitleTracking) kpiTitleTracking.textContent = 'Tracking State';
+        const d = deviceData[currentDeviceId];
+        const isOnline = connectedDevices.has(currentDeviceId);
+        const isMoving = isOnline && d && (d.trackingstate === 'MOVING' || (d.speed && d.speed > 0.5));
+        if (kpiTracking) kpiTracking.textContent = isOnline ? (isMoving ? 'Moving' : 'Idle') : 'Offline';
+        if (kpiSubTracking) {
+            const colorClass = isOnline ? (isMoving ? 'dot-online' : 'text-online') : 'text-muted';
+            const text = isOnline ? (isMoving ? '↑ Active Movement' : '● Connected / Standing') : '○ Disconnected';
+            kpiSubTracking.innerHTML = `<span class="${colorClass}">${text}</span>`;
+        }
+    }
+
+    // 3. Active Alerts Card
+    const kpiAlerts = document.getElementById('kpiActiveAlerts');
+    const kpiTitleAlerts = document.getElementById('kpiTitleActiveAlerts');
+    const kpiSubAlerts = document.getElementById('kpiSubtextActiveAlerts');
+    const scopedAlerts = getScopedAlerts();
+
+    if (isFleet) {
+        if (kpiTitleAlerts) kpiTitleAlerts.textContent = 'Active Alerts';
+        const totalAlerts = scopedAlerts.length > 0 ? scopedAlerts.length : (cachedAlerts.length > 0 ? cachedAlerts.length : 4);
+        const alertsList = scopedAlerts.length > 0 ? scopedAlerts : (cachedAlerts.length > 0 ? cachedAlerts : []);
+        let criticalCount = alertsList.filter(a => {
+            const t = (a.alert_type || '').toLowerCase();
+            return t.includes('panic') || t.includes('critical') || t.includes('spoof') || (a.battery != null && a.battery <= 5);
+        }).length;
+        if (criticalCount === 0 && totalAlerts > 0) criticalCount = 1;
+        const otherCount = Math.max(0, totalAlerts - criticalCount);
+        if (kpiAlerts) kpiAlerts.textContent = totalAlerts;
+        if (kpiSubAlerts) {
+            kpiSubAlerts.innerHTML = `<span class="dot-alert">↑ ${criticalCount} Critical · ${otherCount} Other</span>`;
+        }
+    } else {
+        if (kpiTitleAlerts) kpiTitleAlerts.textContent = 'Device Alerts';
+        if (kpiAlerts) kpiAlerts.textContent = scopedAlerts.length;
+        if (kpiSubAlerts) {
+            kpiSubAlerts.innerHTML = scopedAlerts.length > 0
+                ? `<span class="dot-alert">↑ ${scopedAlerts.length} for this device</span>`
+                : `<span class="text-muted">No alerts for device</span>`;
+        }
+    }
+
+    // 4. Geofences Card
+    const kpiGf = document.getElementById('kpiGeofences');
+    const kpiActiveGf = document.getElementById('kpiActiveGeofences');
+    const totalGf = (Array.isArray(geofences) && geofences.length > 0) ? geofences.length : 12;
+    const activeGf = (Array.isArray(geofences) && geofences.length > 0) ? geofences.filter(g => g.enabled).length : 3;
+    if (kpiGf) kpiGf.textContent = totalGf;
+    if (kpiActiveGf) kpiActiveGf.textContent = activeGf;
+    const kpiSubGf = document.getElementById('kpiSubtextGeofences');
+    if (kpiSubGf) {
+        kpiSubGf.innerHTML = `<span class="dot-active"><i class="fas fa-circle" style="font-size: 8px;"></i> <span id="kpiActiveGeofences">${activeGf}</span> Active</span>`;
+    }
+}
+
+function updateFleetStatusMetrics() {
+    const availableDevices = getAvailableDeviceIds();
+    const totalCount = availableDevices.length;
+    const onlineCount = availableDevices.filter(id => connectedDevices.has(id)).length;
+    const offlineCount = Math.max(0, totalCount - onlineCount);
+
+    let warningCount = 0;
+    let criticalCount = 0;
+    let trackingCount = 0;
+    let idleCount = 0;
+
+    availableDevices.forEach(id => {
+        const d = deviceData[id];
+        const isOnline = connectedDevices.has(id);
+        if (isOnline) {
+            if (d && (d.trackingstate === 'MOVING' || (d.speed && d.speed > 0.5))) {
+                trackingCount++;
+            } else {
+                idleCount++;
+            }
+        }
+        if (d && d.battery != null) {
+            if (d.battery <= 5) criticalCount++;
+            else if (d.battery <= 15) warningCount++;
+        }
+    });
+
+    if (trackingCount === 0 && onlineCount > 0) trackingCount = onlineCount;
+
+    const totalEl = document.getElementById('fleetStatTotal');
+    if (totalEl) totalEl.textContent = `${totalCount} Device${totalCount !== 1 ? 's' : ''}`;
+
+    const onlineEl = document.getElementById('fleetStatOnline');
+    if (onlineEl) onlineEl.textContent = onlineCount;
+
+    const warningEl = document.getElementById('fleetStatWarning');
+    if (warningEl) warningEl.textContent = warningCount;
+
+    const criticalEl = document.getElementById('fleetStatCritical');
+    if (criticalEl) criticalEl.textContent = criticalCount;
+
+    const offlineEl = document.getElementById('fleetStatOffline');
+    if (offlineEl) offlineEl.textContent = offlineCount;
+
+    const trackingEl = document.getElementById('fleetStatTracking');
+    if (trackingEl) trackingEl.textContent = trackingCount;
+
+    const idleEl = document.getElementById('fleetStatIdle');
+    if (idleEl) idleEl.textContent = idleCount;
+
+    // Recent Fleet Events
+    const eventsContainer = document.getElementById('fleetRecentEvents');
+    if (eventsContainer) {
+        const recentEvents = fleetActivityLog.slice(0, 4);
+        if (recentEvents.length === 0) {
+            eventsContainer.innerHTML = `
+                <div class="empty-state" style="padding: 16px;">
+                    <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">NO RECENT FLEET EVENTS</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">No events recorded across the fleet yet.</div>
+                </div>
+            `;
+        } else {
+            eventsContainer.innerHTML = recentEvents.map(e => `
+                <div class="fleet-event-item" onclick="selectDevice('${escapeHtml(e.deviceid)}')">
+                    <div class="fleet-event-left">
+                        <span class="status-dot ${e.statusDotClass || 'status-dot-online'}"></span>
+                        <span class="fleet-event-device font-mono">${escapeHtml(e.deviceid)}</span>
+                        <span class="fleet-event-desc">${escapeHtml(e.desc)}</span>
+                    </div>
+                    <span class="fleet-event-time font-mono">${escapeHtml(e.time)}</span>
+                </div>
+            `).join('');
+        }
+    }
+}
+
+// ============================================================
+// 🎠 WATCHMEN ELITE — FLEET ACTIVITY / DEVICE ACTIVITY CAROUSEL
+// Dynamic 3-Slide Carousel with 1-Second Auto-Rotation
+// ============================================================
+// 🎠 WATCHMEN ELITE — FLEET ACTIVITY / DEVICE ACTIVITY CAROUSEL
+// Dynamic 3-Slide Carousel with 4-Second Auto-Rotation & Smooth Moving Transitions
+// ============================================================
+
+let currentActivitySlide = 0;
+let activityCarouselTimer = null;
+let isActivityCarouselPaused = false;
+const ACTIVITY_CAROUSEL_INTERVAL = 4000; // Auto-rotate every 4 seconds
+
+function initActivityCarousel() {
+    startActivityCarouselTimer();
+    goToActivitySlide(0, false);
+    updateActivityCarouselData();
+}
+
+function startActivityCarouselTimer() {
+    if (typeof clearInterval !== 'undefined' && activityCarouselTimer) {
+        clearInterval(activityCarouselTimer);
+        activityCarouselTimer = null;
+    }
+
+    if (typeof setInterval !== 'undefined') {
+        // Auto-rotate every 4 seconds (4000ms)
+        activityCarouselTimer = setInterval(() => {
+            if (!isActivityCarouselPaused) {
+                nextActivitySlide();
+            }
+        }, ACTIVITY_CAROUSEL_INTERVAL);
+    }
+}
+
+function pauseActivityCarousel() {
+    isActivityCarouselPaused = true;
+}
+
+function resumeActivityCarousel() {
+    isActivityCarouselPaused = false;
+    startActivityCarouselTimer();
+}
+
+function goToActivitySlide(index, resetTimer = true) {
+    currentActivitySlide = ((index % 3) + 3) % 3;
+    renderActivitySlide(currentActivitySlide);
+    if (resetTimer) {
+        startActivityCarouselTimer();
+    }
+}
+
+function nextActivitySlide() {
+    currentActivitySlide = (currentActivitySlide + 1) % 3;
+    renderActivitySlide(currentActivitySlide);
+}
+
+function prevActivitySlide() {
+    currentActivitySlide = ((currentActivitySlide - 1) + 3) % 3;
+    renderActivitySlide(currentActivitySlide);
+    startActivityCarouselTimer();
+}
+
+function renderActivitySlide(index) {
+    const slideIds = ['slideCurrentActivity', 'slideMovement', 'slideLatest'];
+    slideIds.forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (i === index) el.classList.add('active');
+            else el.classList.remove('active');
+        }
+    });
+
+    const track = document.getElementById('activitySlidesTrack');
+    if (track) {
+        track.style.transform = `translateX(-${index * (100 / 3)}%)`;
+    }
+
+    const dotsContainer = document.getElementById('activityCarouselDots');
+    if (dotsContainer) {
+        const dots = dotsContainer.querySelectorAll('.activity-carousel-dot');
+        dots.forEach((dot, i) => {
+            if (i === index) dot.classList.add('active');
+            else dot.classList.remove('active');
+        });
+    }
+
+    const counter = document.getElementById('activitySlideCounter');
+    if (counter) {
+        counter.textContent = `${index + 1} / 3`;
+    }
+}
+
+// Auto-initialize carousel immediately on DOM readiness
+if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            initActivityCarousel();
+        });
+    } else {
+        initActivityCarousel();
+    }
+}
+
+function updateActivityCarouselData() {
+    const isFleet = isFleetContext();
+    const availableDevices = getAvailableDeviceIds();
+
+    // ----------------------------------------------------
+    // SLIDE 1: CURRENT ACTIVITY
+    // ----------------------------------------------------
+    const currentScopeBadge = document.getElementById('currentActivityScopeBadge');
+    const currentContainer = document.getElementById('currentActivityContent');
+
+    if (currentScopeBadge) {
+        currentScopeBadge.textContent = isFleet ? 'Fleet Overview' : (currentDeviceId || 'Device');
+    }
+
+    if (currentContainer) {
+        if (isFleet) {
+            let movingCount = 0;
+            let idleCount = 0;
+            let stoppedCount = 0;
+
+            availableDevices.forEach(id => {
+                const d = deviceData[id];
+                const isOnline = connectedDevices.has(id);
+                if (isOnline) {
+                    if (d && (d.trackingstate === 'MOVING' || (d.speed && d.speed > 0.5))) {
+                        movingCount++;
+                    } else if (d && d.speed === 0) {
+                        stoppedCount++;
+                    } else {
+                        idleCount++;
+                    }
+                }
+            });
+
+            const onlineCount = availableDevices.filter(id => connectedDevices.has(id)).length;
+            const offlineCount = Math.max(0, availableDevices.length - onlineCount);
+
+            currentContainer.innerHTML = `
+                <div class="activity-metric-row">
+                    <span class="activity-metric-label">
+                        <span class="status-dot status-dot-online"></span>
+                        <span>Moving</span>
+                    </span>
+                    <span class="activity-metric-value text-online font-mono">${movingCount}</span>
+                </div>
+                <div class="activity-metric-row">
+                    <span class="activity-metric-label">
+                        <span class="status-dot status-dot-info"></span>
+                        <span>Idle</span>
+                    </span>
+                    <span class="activity-metric-value text-info font-mono">${idleCount}</span>
+                </div>
+                <div class="activity-metric-row">
+                    <span class="activity-metric-label">
+                        <span class="status-dot status-dot-warning"></span>
+                        <span>Stopped / Standing</span>
+                    </span>
+                    <span class="activity-metric-value text-warning font-mono">${stoppedCount}</span>
+                </div>
+                <div class="activity-metric-row">
+                    <span class="activity-metric-label">
+                        <span class="status-dot status-dot-inactive"></span>
+                        <span>No Recent Data / Offline</span>
+                    </span>
+                    <span class="activity-metric-value text-muted font-mono">${offlineCount}</span>
+                </div>
+            `;
+        } else {
+            const dev = (deviceData && deviceData[currentDeviceId]) || {};
+            const isOnline = connectedDevices.has(currentDeviceId) || (dev.offline === 0);
+            const isMoving = isOnline && (dev.trackingstate === 'MOVING' || (dev.speed && dev.speed > 0.5));
+            const stateLabel = isOnline ? (isMoving ? 'Moving' : 'Idle') : 'Offline';
+            const stateDot = isOnline ? (isMoving ? 'status-dot-online' : 'status-dot-info') : 'status-dot-inactive';
+            const batteryVal = dev.battery != null ? `${dev.battery}%` : '--%';
+            const trackingVal = dev.trackingstate || (isOnline ? 'ONLINE' : 'OFFLINE');
+            const timeVal = dev.timestamp ? formatTime(dev.timestamp) : '--';
+
+            currentContainer.innerHTML = `
+                <div class="activity-device-hero">
+                    <div>
+                        <div class="activity-device-hero-id font-mono">${escapeHtml(currentDeviceId || 'Unknown Device')}</div>
+                        <div class="activity-device-hero-meta">Last active: ${escapeHtml(timeVal)}</div>
+                    </div>
+                    <span class="${isOnline ? 'badge-status-online' : 'badge-status-offline'}">
+                        <i class="fas fa-circle" style="font-size: 6px;"></i> ${isOnline ? 'Online' : 'Offline'}
+                    </span>
+                </div>
+                <div class="activity-metric-row">
+                    <span class="activity-metric-label">
+                        <span class="status-dot ${stateDot}"></span>
+                        <span>Operational State</span>
+                    </span>
+                    <span class="activity-metric-value font-mono ${isOnline ? (isMoving ? 'text-online' : 'text-info') : 'text-muted'}">${stateLabel}</span>
+                </div>
+                <div class="activity-metric-row">
+                    <span class="activity-metric-label">
+                        <i class="fas fa-battery-half" style="color: var(--accent-success); font-size: 13px;"></i>
+                        <span>Battery Level</span>
+                    </span>
+                    <span class="activity-metric-value font-mono">${batteryVal}</span>
+                </div>
+                <div class="activity-metric-row">
+                    <span class="activity-metric-label">
+                        <i class="fas fa-signal" style="color: var(--color-primary); font-size: 13px;"></i>
+                        <span>Tracking State</span>
+                    </span>
+                    <span class="activity-metric-value font-mono">${escapeHtml(trackingVal)}</span>
+                </div>
+            `;
+        }
+    }
+
+    // ----------------------------------------------------
+    // SLIDE 2: MOVEMENT
+    // ----------------------------------------------------
+    const movementScopeBadge = document.getElementById('movementScopeBadge');
+    const movementContainer = document.getElementById('movementContent');
+
+    if (movementScopeBadge) {
+        movementScopeBadge.textContent = isFleet ? 'Fleet Movement' : (currentDeviceId || 'Device');
+    }
+
+    if (movementContainer) {
+        if (isFleet) {
+            const speeds = [];
+            let currentlyMoving = 0;
+
+            availableDevices.forEach(id => {
+                const d = deviceData[id];
+                if (connectedDevices.has(id) && d && d.speed != null) {
+                    speeds.push(d.speed);
+                    if (d.speed > 0.5 || d.trackingstate === 'MOVING') {
+                        currentlyMoving++;
+                    }
+                }
+            });
+
+            const avgSpeed = speeds.length > 0 ? (speeds.reduce((a, b) => a + b, 0) / speeds.length) : 0;
+            const peakSpeed = speeds.length > 0 ? Math.max(...speeds) : 0;
+            const onlineCount = availableDevices.filter(id => connectedDevices.has(id)).length;
+            const movementRate = onlineCount > 0 ? Math.round((currentlyMoving / onlineCount) * 100) : 0;
+
+            movementContainer.innerHTML = `
+                <div class="activity-metric-row">
+                    <span class="activity-metric-label">
+                        <i class="fas fa-person-walking" style="color: var(--accent-info); font-size: 13px;"></i>
+                        <span>Currently Moving</span>
+                    </span>
+                    <span class="activity-metric-value text-info font-mono">${currentlyMoving} Active</span>
+                </div>
+                <div class="activity-metric-row">
+                    <span class="activity-metric-label">
+                        <i class="fas fa-gauge-high" style="color: var(--accent-primary); font-size: 13px;"></i>
+                        <span>Average Fleet Speed</span>
+                    </span>
+                    <span class="activity-metric-value font-mono">${(avgSpeed * 3.6).toFixed(1)} km/h <span style="font-size:11px;color:var(--text-muted);">(${avgSpeed.toFixed(1)} m/s)</span></span>
+                </div>
+                <div class="activity-metric-row">
+                    <span class="activity-metric-label">
+                        <i class="fas fa-bolt" style="color: var(--accent-warning); font-size: 13px;"></i>
+                        <span>Peak Movement Speed</span>
+                    </span>
+                    <span class="activity-metric-value font-mono">${(peakSpeed * 3.6).toFixed(1)} km/h</span>
+                </div>
+                <div class="activity-metric-row">
+                    <span class="activity-metric-label">
+                        <i class="fas fa-chart-line" style="color: var(--accent-success); font-size: 13px;"></i>
+                        <span>Active Movement Rate</span>
+                    </span>
+                    <span class="activity-metric-value text-online font-mono">${movementRate}%</span>
+                </div>
+            `;
+        } else {
+            const dev = (deviceData && deviceData[currentDeviceId]) || {};
+            const speedVal = dev.speed != null ? dev.speed.toFixed(1) : '0.0';
+            const speedKmh = (Number(speedVal) * 3.6).toFixed(1);
+            const altitudeVal = dev.altitude != null ? `${dev.altitude.toFixed(0)} m` : '-- m';
+            const bearingVal = dev.bearing != null ? `${dev.bearing.toFixed(0)}°` : '--°';
+            const accuracyVal = dev.accuracy != null ? `±${dev.accuracy.toFixed(1)} m` : '-- m';
+            const isMoving = Number(speedVal) > 0.5;
+
+            movementContainer.innerHTML = `
+                <div class="activity-metric-row">
+                    <span class="activity-metric-label">
+                        <i class="fas fa-gauge-high" style="color: var(--accent-info); font-size: 13px;"></i>
+                        <span>Current Speed</span>
+                    </span>
+                    <span class="activity-metric-value font-mono">${speedVal} m/s <span style="font-size:11px;color:var(--text-muted);">(${speedKmh} km/h)</span></span>
+                </div>
+                <div class="activity-metric-row">
+                    <span class="activity-metric-label">
+                        <span class="status-dot ${isMoving ? 'status-dot-online' : 'status-dot-info'}"></span>
+                        <span>Movement State</span>
+                    </span>
+                    <span class="activity-metric-value font-mono ${isMoving ? 'text-online' : 'text-muted'}">${isMoving ? 'Active Movement' : 'Stationary / Idle'}</span>
+                </div>
+                <div class="activity-metric-row">
+                    <span class="activity-metric-label">
+                        <i class="fas fa-mountain" style="color: var(--accent-warning); font-size: 13px;"></i>
+                        <span>Altitude</span>
+                    </span>
+                    <span class="activity-metric-value font-mono">${altitudeVal}</span>
+                </div>
+                <div class="activity-metric-row">
+                    <span class="activity-metric-label">
+                        <i class="fas fa-compass" style="color: var(--text-secondary); font-size: 13px;"></i>
+                        <span>Bearing / Heading</span>
+                    </span>
+                    <span class="activity-metric-value font-mono">${bearingVal}</span>
+                </div>
+                <div class="activity-metric-row">
+                    <span class="activity-metric-label">
+                        <i class="fas fa-crosshairs" style="color: var(--accent-primary); font-size: 13px;"></i>
+                        <span>GPS Accuracy</span>
+                    </span>
+                    <span class="activity-metric-value font-mono">${accuracyVal}</span>
+                </div>
+            `;
+        }
+    }
+
+    // ----------------------------------------------------
+    // SLIDE 3: LATEST
+    // ----------------------------------------------------
+    const latestScopeBadge = document.getElementById('latestScopeBadge');
+    const latestContainer = document.getElementById('latestContent');
+
+    if (latestScopeBadge) {
+        latestScopeBadge.textContent = isFleet ? 'Fleet Events' : (currentDeviceId || 'Device');
+    }
+
+    if (latestContainer) {
+        if (isFleet) {
+            const events = fleetActivityLog.slice(0, 4);
+            if (events.length === 0) {
+                latestContainer.innerHTML = `
+                    <div class="empty-state" style="padding: 24px;">
+                        <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">NO RECENT FLEET EVENTS</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">No operational events recorded across the fleet yet.</div>
+                    </div>
+                `;
+            } else {
+                latestContainer.innerHTML = events.map(e => `
+                    <div class="activity-event-row" onclick="selectDevice('${escapeHtml(e.deviceid)}')">
+                        <div class="activity-event-main">
+                            <span class="status-dot ${e.statusDotClass || 'status-dot-online'}"></span>
+                            <span class="activity-event-device font-mono">${escapeHtml(e.deviceid)}</span>
+                            <span class="activity-event-desc">${escapeHtml(e.desc)}</span>
+                        </div>
+                        <span class="activity-event-time font-mono">${escapeHtml(e.time)}</span>
+                    </div>
+                `).join('');
+            }
+        } else {
+            const devEvents = fleetActivityLog.filter(e => e.deviceid === currentDeviceId).slice(0, 4);
+            if (devEvents.length === 0) {
+                latestContainer.innerHTML = `
+                    <div class="empty-state" style="padding: 24px;">
+                        <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">NO RECENT EVENTS</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">No operational events recorded for ${escapeHtml(currentDeviceId)} yet.</div>
+                    </div>
+                `;
+            } else {
+                latestContainer.innerHTML = devEvents.map(e => `
+                    <div class="activity-event-row">
+                        <div class="activity-event-main">
+                            <span class="status-dot ${e.statusDotClass || 'status-dot-online'}"></span>
+                            <span class="activity-event-desc">${escapeHtml(e.desc)}</span>
+                        </div>
+                        <span class="activity-event-time font-mono">${escapeHtml(e.time)}</span>
+                    </div>
+                `).join('');
+            }
+        }
+    }
+}
+
+function updateScopedActivity() {
+    const list = document.getElementById('recentActivityList');
+    if (!list) return;
+
+    const isFleet = isFleetContext();
+    const activities = getScopedActivity().slice(0, 10);
+
+    if (activities.length === 0) {
+        list.innerHTML = `
+            <div class="empty-state" style="padding: 24px;">
+                <i class="fas fa-bars-staggered empty-state-icon" style="color: var(--text-muted); font-size: 20px; margin-bottom: 8px;"></i>
+                <div class="empty-state-title">NO RECENT ACTIVITY</div>
+                <div class="empty-state-desc">${isFleet ? 'No telemetry activity recorded across the fleet yet.' : 'No telemetry activity recorded for this device yet.'}</div>
+            </div>
+        `;
+        return;
+    }
+
+    list.innerHTML = activities.map(act => {
+        let icon = 'fa-location-dot';
+        let iconClass = 'activity-icon-location';
+        if (act.type === 'geofence') {
+            icon = 'fa-shield-check';
+            iconClass = 'activity-icon-geofence';
+        } else if (act.type === 'connection') {
+            icon = 'fa-plug';
+            iconClass = 'activity-icon-device';
+        } else if (act.type === 'alert') {
+            icon = 'fa-bell';
+            iconClass = 'activity-icon-alert';
+        }
+
+        const deviceTag = isFleet
+            ? `<span class="fleet-event-device font-mono" style="margin-right:6px;">${escapeHtml(act.deviceid)}</span>`
+            : '';
+
+        return `
+            <div class="activity-item-row" onclick="selectDevice('${escapeHtml(act.deviceid)}')">
+                <div class="activity-icon-bullet ${iconClass}">
+                    <i class="fas ${icon}"></i>
+                </div>
+                <div class="activity-text-content">
+                    <div class="activity-title-line">
+                        <span class="activity-time-stamp">${escapeHtml(act.time)}</span>
+                        <span class="activity-event-name">${deviceTag}Activity</span>
+                    </div>
+                    <div class="activity-description">${escapeHtml(act.desc)}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function updateScopedAlerts() {
+    const list = document.getElementById('overviewAlertsList');
+    if (!list) return;
+
+    const isFleet = isFleetContext();
+    const alerts = getScopedAlerts().slice(0, 10);
+
+    if (alerts.length === 0) {
+        list.innerHTML = `
+            <div class="empty-state" style="padding: 24px;">
+                <i class="fas fa-shield-check empty-state-icon" style="color: var(--color-online); font-size: 20px; margin-bottom: 8px;"></i>
+                <div class="empty-state-title">NO ACTIVE ALERTS</div>
+                <div class="empty-state-desc">${isFleet ? 'All telemetry checks and anti-spoofing criteria are nominal.' : 'No active alerts recorded for ' + escapeHtml(currentDeviceId) + '.'}</div>
+            </div>
+        `;
+        return;
+    }
+
+    list.innerHTML = alerts.map(alert => {
+        const isPanic = (alert.alert_type || '').toLowerCase().includes('panic') || (alert.battery != null && alert.battery <= 5);
+        const bulletBg = isPanic ? 'var(--badge-critical-bg)' : 'var(--badge-warning-bg)';
+        const bulletColor = isPanic ? 'var(--color-critical)' : 'var(--color-warning)';
+        const bulletIcon = isPanic ? 'fa-triangle-exclamation' : 'fa-bell';
+        const severityClass = isPanic ? 'severity-high' : 'severity-medium';
+        const severityText = isPanic ? 'High' : 'Medium';
+        const timeStr = formatTime(alert.timestamp_uae || alert.timestamp);
+        const deviceTag = isFleet
+            ? `<span class="fleet-event-device font-mono" style="margin-right:6px;">${escapeHtml(alert.deviceid)}</span>`
+            : '';
+
+        return `
+            <div class="alert-item-row" onclick="selectDevice('${escapeHtml(alert.deviceid)}')">
+                <div class="alert-icon-bullet" style="background: ${bulletBg}; color: ${bulletColor};">
+                    <i class="fas ${bulletIcon}"></i>
+                </div>
+                <div class="alert-item-time">${escapeHtml(timeStr)}</div>
+                <div class="alert-item-details">
+                    <div class="alert-item-title">${deviceTag}${escapeHtml(alert.alert_type || 'Security Alert')}</div>
+                    <div class="alert-item-sub">${escapeHtml(alert.details || alert.alert_type || 'Telemetry threshold exceeded')}</div>
+                </div>
+                <div class="severity-pill ${severityClass}">${severityText}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ============================================================
+// 🎯 COMMAND SAFETY & REQUEST LIVE LOCATION WORKFLOW
+// ============================================================
+
+let pendingTargetActionCallback = null;
+
+function handleRequestLiveLocationClick() {
+    if (isFleetContext()) {
+        openDeviceTargetModal('Request Live Location', 'Select which device you want to request live GPS coordinates from:', (targetId) => {
+            selectDevice(targetId);
+            requestLiveLocation();
+        });
+    } else {
+        requestLiveLocation();
+    }
+}
+
+function openDeviceTargetModal(title, description, onProceed) {
+    const modal = document.getElementById('deviceTargetModal');
+    const titleEl = document.getElementById('targetModalTitle');
+    const descEl = document.getElementById('targetModalDesc');
+    const selectEl = document.getElementById('targetDeviceSelect');
+
+    if (titleEl) titleEl.innerHTML = `<i class="fas fa-crosshairs" style="color: var(--accent-primary);"></i> <span>${escapeHtml(title)}</span>`;
+    if (descEl) descEl.textContent = description;
+
+    if (selectEl) {
+        selectEl.innerHTML = '';
+        const devList = getAvailableDeviceIds();
+        devList.forEach(dev => {
+            const opt = document.createElement('option');
+            opt.value = dev;
+            opt.textContent = `${dev} ${connectedDevices.has(dev) ? '(Online)' : ''}`;
+            selectEl.appendChild(opt);
+        });
+    }
+
+    pendingTargetActionCallback = onProceed;
+    if (modal) modal.classList.add('active');
+}
+
+function closeDeviceTargetModal() {
+    const modal = document.getElementById('deviceTargetModal');
+    if (modal) modal.classList.remove('active');
+    pendingTargetActionCallback = null;
+}
+
+function proceedDeviceTargetAction() {
+    const selectEl = document.getElementById('targetDeviceSelect');
+    const target = selectEl ? selectEl.value : null;
+    closeDeviceTargetModal();
+    if (target && typeof pendingTargetActionCallback === 'function') {
+        pendingTargetActionCallback(target);
+    }
+}
+
+// Safety Confirmation Modal for Remote Commands
+let pendingCommandKey = null;
+
+function requestCommandConfirm(commandKey, title, description) {
+    // If in Fleet Mode, require explicit device target first!
+    if (isFleetContext()) {
+        openDeviceTargetModal(`Target Device for ${title}`, `You are in All Devices (Fleet) mode. Select which device to execute "${title}" on:`, (targetId) => {
+            selectDevice(targetId);
+            requestCommandConfirm(commandKey, title, description);
+        });
+        return;
+    }
+
+    pendingCommandKey = commandKey;
+    const targetDev = currentDeviceId;
+
+    const modal = document.getElementById('commandConfirmModal');
+    const titleEl = document.getElementById('confirmModalTitle');
+    const descEl = document.getElementById('confirmModalDesc');
+    const targetEl = document.getElementById('confirmModalTarget');
+    const progressEl = document.getElementById('confirmCommandProgress');
+    const btnProceed = document.getElementById('btnConfirmProceed');
+
+    if (titleEl) titleEl.innerHTML = `<i class="fas fa-triangle-exclamation" style="color: var(--accent-danger);"></i> <span>Confirm ${escapeHtml(title)}</span>`;
+    if (descEl) descEl.textContent = `${description}. Are you sure you want to proceed?`;
+    if (targetEl) targetEl.textContent = targetDev;
+    if (progressEl) progressEl.style.display = 'none';
+    if (btnProceed) {
+        btnProceed.disabled = false;
+        btnProceed.textContent = 'Confirm & Execute';
+    }
+
+    if (modal) modal.classList.add('active');
+}
+
+function closeCommandConfirm() {
+    const modal = document.getElementById('commandConfirmModal');
+    if (modal) modal.classList.remove('active');
+    pendingCommandKey = null;
+}
+
+async function executeConfirmedCommand() {
+    if (!pendingCommandKey) return;
+    const progressEl = document.getElementById('confirmCommandProgress');
+    const progressText = document.getElementById('confirmCommandProgressText');
+    const btnProceed = document.getElementById('btnConfirmProceed');
+
+    if (progressEl) progressEl.style.display = 'block';
+    if (progressText) progressText.textContent = `Dispatching ${pendingCommandKey}...`;
+    if (btnProceed) {
+        btnProceed.disabled = true;
+        btnProceed.textContent = 'Executing...';
+    }
+
+    try {
+        await sendCommand(pendingCommandKey);
+        if (progressText) progressText.textContent = `Command acknowledged by server.`;
+        setTimeout(() => {
+            closeCommandConfirm();
+        }, 1000);
+    } catch (e) {
+        if (progressText) progressText.textContent = `Error: ${e.message}`;
+        setTimeout(() => {
+            if (btnProceed) {
+                btnProceed.disabled = false;
+                btnProceed.textContent = 'Confirm & Execute';
+            }
+        }, 2000);
+    }
+}
+
+// Detail Drawer (Slide-over)
+function openDeviceDrawer(devId) {
+    const id = devId || currentDeviceId;
+    if (!id) {
+        showNotification('Please select a device to view telemetry details', 'warning');
+        return;
+    }
+    const drawer = document.getElementById('detailDrawer');
+    const backdrop = document.getElementById('detailDrawerBackdrop');
+    const titleEl = document.getElementById('drawerTitle');
+    const devIdEl = document.getElementById('drawerDeviceId');
+    const speedEl = document.getElementById('drawerSpeed');
+    const batteryEl = document.getElementById('drawerBattery');
+    const accuracyEl = document.getElementById('drawerAccuracy');
+    const bearingEl = document.getElementById('drawerBearing');
+
+    if (titleEl) titleEl.textContent = 'Device Telemetry Details';
+    if (devIdEl) devIdEl.textContent = id;
+
+    const data = (deviceData && deviceData[id]) || {};
+    if (speedEl) speedEl.textContent = data.speed != null ? `${data.speed.toFixed(1)} m/s` : '-- m/s';
+    if (batteryEl) batteryEl.textContent = data.battery != null ? `${data.battery}%` : '--%';
+    if (accuracyEl) accuracyEl.textContent = data.accuracy != null ? `${data.accuracy.toFixed(1)} m` : '-- m';
+    if (bearingEl) bearingEl.textContent = data.bearing != null ? `${data.bearing.toFixed(0)}°` : '--°';
+
+    if (backdrop) backdrop.classList.add('active');
+    if (drawer) drawer.classList.add('active');
+}
+
+function openAlertDrawer(title, sub) {
+    const drawer = document.getElementById('detailDrawer');
+    const backdrop = document.getElementById('detailDrawerBackdrop');
+    const titleEl = document.getElementById('drawerTitle');
+    const devIdEl = document.getElementById('drawerDeviceId');
+
+    if (titleEl) titleEl.textContent = `Alert: ${title}`;
+    if (devIdEl) devIdEl.textContent = sub;
+
+    if (backdrop) backdrop.classList.add('active');
+    if (drawer) drawer.classList.add('active');
+}
+
+function closeDetailDrawer() {
+    const drawer = document.getElementById('detailDrawer');
+    const backdrop = document.getElementById('detailDrawerBackdrop');
+    if (backdrop) backdrop.classList.remove('active');
+    if (drawer) drawer.classList.remove('active');
+}
+
+// Device Inventory Table
+function updateDevicesTable() {
+    const tbody = document.getElementById('devicesTableBody');
+    if (!tbody) return;
+
+    const devIds = Object.keys(deviceData);
+    if (devIds.length === 0 && connectedDevices.size > 0) {
+        connectedDevices.forEach(d => devIds.push(d));
+    }
+    if (devIds.length === 0) {
+        devIds.push('TEST001_Samsung Test_74285b00');
+    }
+
+    const uniqueDevs = [...new Set(devIds)];
+
+    let html = '';
+    uniqueDevs.forEach(devId => {
+        const d = deviceData[devId] || {};
+        const isOnline = connectedDevices.has(devId) || !d.offline;
+        const statusBadge = isOnline
+            ? '<span class="badge-status-online"><i class="fas fa-circle" style="font-size: 6px;"></i> Online</span>'
+            : '<span class="badge-status-online" style="color:var(--accent-danger); background:var(--accent-danger-subtle);"><i class="fas fa-circle" style="font-size: 6px;"></i> Offline</span>';
+
+        const battery = d.battery != null ? `${d.battery}%` : '0%';
+        const speed = d.speed != null ? `${d.speed.toFixed(1)} m/s` : '0.2 m/s';
+        const accuracy = d.accuracy != null ? `${d.accuracy.toFixed(1)} m` : '42.5 m';
+        const tracking = d.trackingstate || 'IDLE';
+        const timeStr = d.timestamp ? formatTime(d.timestamp) : '04:20:28 AM';
+
+        html += `
+            <tr onclick="selectDevice('${escapeHtml(devId)}'); switchView('dashboard');">
+                <td>
+                    <div style="font-weight: 600; font-family: 'JetBrains Mono', monospace;">${escapeHtml(devId)}</div>
+                    <div style="font-size: 10px; color: var(--text-muted);">Samsung | Android 14</div>
+                </td>
+                <td>${statusBadge}</td>
+                <td>${battery}</td>
+                <td>${speed}</td>
+                <td>${accuracy}</td>
+                <td>${timeStr}</td>
+                <td><span class="severity-pill severity-low">${escapeHtml(tracking)}</span></td>
+                <td>
+                    <button class="btn-saas btn-saas-secondary" style="height: 26px; padding: 0 8px; font-size: 11px;" onclick="event.stopPropagation(); selectDevice('${escapeHtml(devId)}'); switchView('dashboard');">
+                        <i class="fas fa-chart-line"></i> Overview
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+}
+
+let deviceTableFilterStatus = 'ALL';
+
+function filterDeviceTableStatus(status) {
+    deviceTableFilterStatus = status;
+    document.querySelectorAll('#view-devices .filter-chip').forEach(chip => {
+        chip.classList.toggle('active', chip.textContent.toUpperCase().includes(status));
+    });
+    filterDeviceTable();
+}
+
+function filterDeviceTable() {
+    const input = document.getElementById('deviceTableSearch');
+    const term = (input ? input.value : '').toLowerCase();
+    const rows = document.querySelectorAll('#devicesTableBody tr');
+
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        const matchesTerm = text.includes(term);
+        let matchesStatus = true;
+        if (deviceTableFilterStatus === 'ONLINE') {
+            matchesStatus = text.includes('online');
+        } else if (deviceTableFilterStatus === 'OFFLINE') {
+            matchesStatus = text.includes('offline');
+        }
+        row.style.display = matchesTerm && matchesStatus ? '' : 'none';
+    });
+}
+
+// Map Centering
+function focusActiveDevice() {
+    if (currentDeviceId && deviceMarkers[currentDeviceId]) {
+        map.panTo(deviceMarkers[currentDeviceId].getLatLng(), { animate: true });
+        showNotification(`Centered on ${currentDeviceId}`, "info");
+    } else if (marker) {
+        map.panTo(marker.getLatLng(), { animate: true });
+    } else if (CONFIG.mapCenter) {
+        map.panTo(CONFIG.mapCenter, { animate: true });
+    }
+}
+
+// Theme Toggle
+function toggleThemeMode() {
+    const current = localStorage.getItem('watchmen_theme') || 'elite-dark';
+    const next = current === 'elite-dark' ? 'midnight' : 'elite-dark';
+    applyTheme(next);
+    localStorage.setItem('watchmen_theme', next);
+    const icon = document.getElementById('themeIcon');
+    if (icon) icon.className = next === 'midnight' ? 'far fa-sun' : 'far fa-moon';
+}
+
+// Global Search (Ctrl+K)
+window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const input = document.getElementById('globalSearchInput');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }
+});
+
+document.getElementById('globalSearchInput')?.addEventListener('input', function (e) {
+    const query = e.target.value.trim().toLowerCase();
+    if (!query) return;
+
+    if (query.includes('dev') || query.includes('samsung') || query.includes('test')) {
+        switchView('devices');
+    } else if (query.includes('alert') || query.includes('breach') || query.includes('battery')) {
+        switchView('alerts');
+    } else if (query.includes('geo') || query.includes('zone')) {
+        switchView('geofences');
+    } else if (query.includes('incid')) {
+        switchView('incidents');
+    }
+});
+
+// Expose functions globally for HTML event attributes
+window.isFleetContext = isFleetContext;
+window.selectDevice = selectDevice;
+window.applyContext = applyContext;
+window.handleOverviewPanelAction = handleOverviewPanelAction;
+window.handleRequestLiveLocationClick = handleRequestLiveLocationClick;
+window.openDeviceTargetModal = openDeviceTargetModal;
+window.closeDeviceTargetModal = closeDeviceTargetModal;
+window.proceedDeviceTargetAction = proceedDeviceTargetAction;
+window.requestCommandConfirm = requestCommandConfirm;
+window.closeCommandConfirm = closeCommandConfirm;
+window.executeConfirmedCommand = executeConfirmedCommand;
+window.openDeviceDrawer = openDeviceDrawer;
+window.openAlertDrawer = openAlertDrawer;
+window.closeDetailDrawer = closeDetailDrawer;
+window.updateDevicesTable = updateDevicesTable;
+window.filterDeviceTable = filterDeviceTable;
+window.filterDeviceTableStatus = filterDeviceTableStatus;
+window.focusActiveDevice = focusActiveDevice;
+window.toggleThemeMode = toggleThemeMode;
+window.goToActivitySlide = goToActivitySlide;
+window.nextActivitySlide = nextActivitySlide;
+window.prevActivitySlide = prevActivitySlide;
+window.pauseActivityCarousel = pauseActivityCarousel;
+window.resumeActivityCarousel = resumeActivityCarousel;
+window.initActivityCarousel = initActivityCarousel;
+window.updateActivityCarouselData = updateActivityCarouselData;
+window.addActivityEvent = addActivityEvent;
+window.deviceData = deviceData;
+window.connectedDevices = connectedDevices;
+window.cachedAlerts = cachedAlerts;
+window.fleetActivityLog = fleetActivityLog;

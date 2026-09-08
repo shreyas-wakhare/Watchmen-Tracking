@@ -404,7 +404,9 @@ class TrackingService : Service(), SensorEventListener {
     private var locationCallback: LocationCallback? = null
 
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val client = OkHttpClient()
+    private val client = OkHttpClient.Builder()
+        .pingInterval(15, java.util.concurrent.TimeUnit.SECONDS)
+        .build()
     private var webSocket: WebSocket? = null
     @Volatile private var webSocketConnected = false
     private val isConnecting = java.util.concurrent.atomic.AtomicBoolean(false)

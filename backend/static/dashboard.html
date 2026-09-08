@@ -3,2387 +3,1592 @@
 
 <head>
     <meta charset="UTF-8" />
-    <title>Watchmen Tracker | Elite Command Center</title>
+    <title>Watchmen Elite | DWEX Command & Control Center</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <style>
-        :root {
-            --bg-primary: #10142d;
-            --bg-secondary: #1a1f44;
-            --bg-card: rgba(26, 31, 68, 0.98);
-            --accent-primary: #00f5ff;
-            --accent-secondary: #a855f7;
-            --accent-success: #22d3ee;
-            --accent-warning: #fbbf24;
-            --accent-danger: #f87171;
-            --text-primary: #ffffff;
-            --text-secondary: #f1f5f9;
-            --border-color: rgba(0, 245, 255, 0.4);
-            --shadow-glow: 0 0 30px rgba(0, 245, 255, 0.1);
-            --sidebar-width: 320px;
-            --header-height: 70px;
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
 
-        .stat-label {
-            color: #ffffff !important;
-            font-weight: 700 !important;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-        }
+    <!-- Leaflet & Draw -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 
-        .stat-value {
-            color: var(--accent-primary) !important;
-            text-shadow: 0 0 15px rgba(0, 245, 255, 0.4);
-        }
+    <!-- Chart.js -->
+    <script src="/static/chart.min.js"></script>
 
-        .stat-value {
-            font-weight: 900;
-            letter-spacing: -1px;
-            text-shadow: 0 0 10px rgba(0, 245, 255, 0.3);
-        }
-
-        .info-label {
-            color: #fff;
-            font-weight: 600;
-        }
-
-        /* Midnight Theme */
-        body.theme-midnight {
-            --bg-primary: #020617;
-            --bg-secondary: #0f172a;
-            --bg-card: rgba(15, 23, 42, 0.98);
-            --accent-primary: #38bdf8;
-            --accent-secondary: #2563eb;
-            --border-color: rgba(56, 189, 248, 0.2);
-            --shadow-glow: 0 0 40px rgba(37, 99, 235, 0.2);
-        }
-
-        /* High Contrast Theme */
-        body.theme-high-contrast {
-            --bg-primary: #000000;
-            --bg-secondary: #1a1a1a;
-            --bg-card: #000000;
-            --accent-primary: #ffff00;
-            --accent-secondary: #ffffff;
-            --text-primary: #ffffff;
-            --text-secondary: #cccccc;
-            --border-color: #ffffff;
-            --shadow-glow: none;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            overflow-x: hidden;
-            line-height: 1.6;
-            transition: var(--transition);
-        }
-
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background:
-                radial-gradient(circle at 20% 50%, rgba(124, 58, 237, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(0, 245, 255, 0.1) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: -1;
-            animation: gradientShift 15s ease infinite;
-        }
-
-        @keyframes gradientShift {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.7;
-            }
-        }
-
-        /* ============================================================
-           🎯 TOP NAVIGATION BAR
-           ============================================================ */
-        .top-nav {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: var(--header-height);
-            background: var(--bg-card);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border-color);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            padding: 0 2rem;
-            box-shadow: var(--shadow-glow);
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-right: auto;
-        }
-
-        .logo-icon {
-            width: 45px;
-            height: 45px;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.4rem;
-            box-shadow: 0 4px 20px rgba(0, 245, 255, 0.4);
-            animation: pulse 3s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-
-            0%,
-            100% {
-                transform: scale(1);
-                box-shadow: 0 4px 20px rgba(0, 245, 255, 0.4);
-            }
-
-            50% {
-                transform: scale(1.05);
-                box-shadow: 0 6px 30px rgba(0, 245, 255, 0.6);
-            }
-        }
-
-        .logo-text h1 {
-            font-size: 1.5rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--accent-primary), #fff);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: -0.5px;
-        }
-
-        .logo-text .subtitle {
-            font-size: 0.7rem;
-            color: var(--text-secondary);
-            margin-top: -2px;
-            font-weight: 500;
-        }
-
-        .nav-controls {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
-
-        .device-selector {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: var(--bg-secondary);
-            padding: 0.5rem 1rem;
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-        }
-
-        .device-selector select {
-            min-width: 180px;
-            background: transparent;
-            border: none;
-            color: var(--accent-primary);
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .connection-status {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: var(--bg-secondary);
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-            font-size: 0.85rem;
-        }
-
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: var(--accent-success);
-            animation: statusPulse 2s infinite;
-        }
-
-        @keyframes statusPulse {
-
-            0%,
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-
-            50% {
-                opacity: 0.6;
-                transform: scale(1.3);
-            }
-        }
-
-        .nav-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .stats-row {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(120px, 1fr));
-            gap: 1rem;
-            margin: 1.5rem 0;
-        }
-
-        .stat-card.green {
-            border-color: rgba(16, 185, 129, .5);
-        }
-
-        .stat-card.red {
-            border-color: rgba(239, 68, 68, .5);
-        }
-
-        .stat-card.purple {
-            border-color: rgba(124, 58, 237, .5);
-        }
-
-        .stat-card.orange {
-            border-color: rgba(245, 158, 11, .5);
-        }
-
-        .badge-override {
-            background: #f59e0b;
-            color: #000;
-            padding: .25rem .5rem;
-            border-radius: 6px;
-            font-size: .7rem;
-            font-weight: 700;
-        }
-
-        .badge-failed {
-            background: #ef4444;
-            color: #fff;
-            padding: .25rem .5rem;
-            border-radius: 6px;
-            font-size: .7rem;
-            font-weight: 700;
-        }
-
-        .badge-spoof {
-            background: #7c3aed;
-            color: #fff;
-            padding: .25rem .5rem;
-            border-radius: 6px;
-            font-size: .7rem;
-            font-weight: 700;
-        }
-
-        .badge-live {
-            background: #10b981;
-            color: #000;
-            padding: .25rem .5rem;
-            border-radius: 6px;
-            font-size: .7rem;
-            font-weight: 700;
-        }
-
-        .nav-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .nav-btn:hover {
-            background: var(--accent-primary);
-            color: #000;
-            border-color: var(--accent-primary);
-            transform: translateY(-2px);
-        }
-
-        .nav-btn.active {
-            background: var(--accent-primary);
-            color: #000;
-            border-color: var(--accent-primary);
-        }
-
-        /* ============================================================
-           📱 SIDEBAR NAVIGATION
-           ============================================================ */
-        .sidebar {
-            position: fixed;
-            left: 0;
-            top: var(--header-height);
-            width: var(--sidebar-width);
-            height: calc(100vh - var(--header-height));
-            background: var(--bg-card);
-            backdrop-filter: blur(20px);
-            border-right: 1px solid var(--border-color);
-            z-index: 900;
-            overflow-y: auto;
-            padding: 1.5rem;
-            transition: var(--transition);
-        }
-
-        .sidebar::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .sidebar::-webkit-scrollbar-track {
-            background: var(--bg-secondary);
-        }
-
-        .sidebar::-webkit-scrollbar-thumb {
-            background: var(--accent-primary);
-            border-radius: 3px;
-        }
-
-        .sidebar.collapsed {
-            transform: translateX(-100%);
-        }
-
-        .sidebar-section {
-            margin-bottom: 2rem;
-        }
-
-        .sidebar-title {
-            font-size: 0.85rem;
-            font-weight: 800;
-            color: #ffffff;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .sidebar-menu {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .menu-item {
-            padding: 0.75rem 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            cursor: pointer;
-            transition: var(--transition);
-            font-size: 0.95rem;
-        }
-
-        .menu-item span {
-            color: #ffffff;
-            font-weight: 500;
-        }
-
-        .menu-item:hover {
-            background: rgba(0, 245, 255, 0.2);
-            border-color: var(--accent-primary);
-            transform: translateX(5px);
-        }
-
-        .menu-item.active {
-            background: linear-gradient(135deg, rgba(0, 245, 255, 0.3), rgba(168, 85, 247, 0.3));
-            border-color: var(--accent-primary);
-            font-weight: 700;
-            box-shadow: 0 0 15px rgba(0, 245, 255, 0.2);
-        }
-
-        .menu-item i {
-            width: 20px;
-            text-align: center;
-            color: var(--accent-primary);
-            font-size: 1.1rem;
-        }
-
-        .menu-badge {
-            margin-left: auto;
-            padding: 0.2rem 0.5rem;
-            background: var(--accent-danger);
-            color: #fff;
-            border-radius: 5px;
-            font-size: 0.7rem;
-            font-weight: 600;
-        }
-
-        /* ============================================================
-           🗺️ MAIN CONTENT AREA
-           ============================================================ */
-        .main-content {
-            margin-left: var(--sidebar-width);
-            margin-top: var(--header-height);
-            padding: 2rem;
-            min-height: calc(100vh - var(--header-height));
-            transition: var(--transition);
-        }
-
-        .main-content.expanded {
-            margin-left: 0;
-        }
-
-        .view-container {
-            display: none;
-            animation: fadeIn 0.3s ease-in-out;
-        }
-
-        .view-container.active {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .view-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-
-        .view-title {
-            font-size: 2rem;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .view-title i {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-        }
-
-        .view-actions {
-            display: flex;
-            gap: 0.75rem;
-        }
-
-        /* ============================================================
-           📊 STATS CARDS
-           ============================================================ */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: var(--bg-card);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border-color);
-            border-radius: 14px;
-            padding: 1.5rem;
-            position: relative;
-            overflow: hidden;
-            transition: var(--transition);
-        }
-
-        .stat-card:hover {
-            border-color: var(--accent-primary);
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-glow);
-        }
-
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 4px;
-            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
-        }
-
-        .stat-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 1rem;
-        }
-
-        .stat-label {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .stat-icon {
-            font-size: 2rem;
-            opacity: 0.3;
-        }
-
-        .stat-value {
-            font-size: 2.5rem;
-            font-weight: 800;
-            font-family: 'JetBrains Mono', monospace;
-            color: var(--accent-primary);
-            line-height: 1;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-change {
-            font-size: 0.75rem;
-            color: var(--accent-success);
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .stat-change.negative {
-            color: var(--accent-danger);
-        }
-
-        /* ============================================================
-           🗺️ MAP CONTAINER
-           ============================================================ */
-        .map-container {
-            background: var(--bg-card);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border-color);
-            border-radius: 14px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: var(--shadow-glow);
-        }
-
-        .modal-backdrop {
-            position: absolute;
-            inset: 0;
-            background: transparent;
-            pointer-events: none;
-        }
-
-        .map-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-
-        .map-title {
-            font-size: 1.2rem;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .map-controls {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        #map {
-            width: 100%;
-            height: 550px;
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-            overflow: hidden;
-        }
-
-        .map-toolbar {
-            display: flex;
-            gap: 0.75rem;
-            margin-top: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .toolbar-group {
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-            background: var(--bg-secondary);
-            padding: 0.5rem 1rem;
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-        }
-
-        /* ============================================================
-           🎨 BUTTONS & INPUTS
-           ============================================================ */
-        button,
-        select,
-        input {
-            font-family: inherit;
-            transition: var(--transition);
-        }
-
-        .btn {
-            padding: 0.6rem 1.2rem;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            border-radius: 10px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .btn:hover {
-            border-color: var(--accent-primary);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(0, 245, 255, 0.2);
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            border: none;
-            color: #000;
-            font-weight: 600;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 25px rgba(0, 245, 255, 0.4);
-        }
-
-        .btn-danger {
-            background: var(--accent-danger);
-            border: none;
-            color: #fff;
-        }
-
-        .btn-sm {
-            padding: 0.4rem 0.8rem;
-            font-size: 0.8rem;
-        }
-
-        select,
-        input[type="number"],
-        input[type="text"],
-        input[type="date"] {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            padding: 0.5rem 0.75rem;
-            border-radius: 8px;
-            font-size: 0.9rem;
-        }
-
-        select:hover,
-        input:hover {
-            border-color: var(--accent-primary);
-            box-shadow: 0 0 10px rgba(0, 245, 255, 0.2);
-        }
-
-        input[type="number"],
-        input[type="text"],
-        input[type="date"] {
-            width: 120px;
-        }
-
-        label {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-
-        input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            accent-color: var(--accent-primary);
-            cursor: pointer;
-        }
-
-        /* ============================================================
-           📋 CARDS & PANELS
-           ============================================================ */
-        .card {
-            background: var(--bg-card);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border-color);
-            border-radius: 14px;
-            padding: 1.5rem;
-            box-shadow: var(--shadow-glow);
-            margin-bottom: 1.5rem;
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .card-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .card-title i {
-            color: var(--accent-primary);
-            font-size: 1.2rem;
-        }
-
-        .grid-2 {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 1.5rem;
-        }
-
-        /* ============================================================
-           🎨 ALERTS & NOTIFICATIONS
-           ============================================================ */
-        .alert {
-            padding: 1rem 1.25rem;
-            border-radius: 10px;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            font-size: 0.9rem;
-            animation: slideDown 0.4s ease-out;
-            border-left: 4px solid;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-15px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .alert.warning {
-            background: rgba(245, 158, 11, 0.2);
-            border-color: var(--accent-warning);
-            color: var(--accent-warning);
-        }
-
-        .alert.danger {
-            background: rgba(239, 68, 68, 0.2);
-            border-color: var(--accent-danger);
-            color: var(--accent-danger);
-        }
-
-        .alert.success {
-            background: rgba(16, 185, 129, 0.2);
-            border-color: var(--accent-success);
-            color: var(--accent-success);
-        }
-
-        .alert.info {
-            background: rgba(0, 245, 255, 0.2);
-            border-color: var(--accent-primary);
-            color: var(--accent-primary);
-        }
-
-        .alert i {
-            font-size: 1.5rem;
-        }
-
-        /* ============================================================
-           📊 CHART CONTAINER
-           ============================================================ */
-        .chart-container {
-            position: relative;
-            height: 300px;
-            margin-top: 1rem;
-        }
-
-        /* ============================================================
-           📱 TABS
-           ============================================================ */
-        .tabs {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
-            border-bottom: 2px solid var(--border-color);
-            overflow-x: auto;
-        }
-
-        .tab {
-            padding: 0.75rem 1.5rem;
-            background: transparent;
-            border: none;
-            border-bottom: 3px solid transparent;
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: var(--transition);
-            white-space: nowrap;
-            font-weight: 500;
-            font-size: 0.9rem;
-        }
-
-        .tab.active {
-            color: var(--accent-primary);
-            border-bottom-color: var(--accent-primary);
-            font-weight: 700;
-        }
-
-        .tab:hover {
-            color: var(--text-primary);
-            background: rgba(0, 245, 255, 0.05);
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.3s ease-in-out;
-        }
-
-        /* ============================================================
-           📋 LIST ITEMS
-           ============================================================ */
-        .list-container {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .list-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            transition: var(--transition);
-        }
-
-        .list-item:hover {
-            border-color: var(--accent-primary);
-            transform: translateX(5px);
-        }
-
-        .list-item-content {
-            flex: 1;
-        }
-
-        .list-item-title {
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            font-size: 0.95rem;
-        }
-
-        .list-item-meta {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            line-height: 1.6;
-        }
-
-        .list-item-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        /* ============================================================
-           🎭 MODAL
-           ============================================================ */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(8px);
-            z-index: 2000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 14px;
-            padding: 2rem;
-            max-width: 600px;
-            width: 90%;
-            max-height: 85vh;
-            overflow-y: auto;
-            animation: modalSlide 0.3s ease-out;
-        }
-
-        @keyframes modalSlide {
-            from {
-                opacity: 0;
-                transform: translateY(-30px) scale(0.95);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .modal-title {
-            font-size: 1.3rem;
-            font-weight: 700;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            font-size: 2rem;
-            cursor: pointer;
-            padding: 0;
-            width: 35px;
-            height: 35px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            transition: var(--transition);
-        }
-
-        .modal-close:hover {
-            background: var(--accent-danger);
-            color: #fff;
-        }
-
-        /* ============================================================
-           📱 RESPONSIVE
-           ============================================================ */
-        @media (max-width: 1024px) {
-            .sidebar {
-                position: fixed;
-                left: 0;
-                top: var(--header-height);
-                width: 85%;
-                max-width: 320px;
-                transform: translateX(-100%);
-                z-index: 1500;
-                box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
-            }
-
-            .sidebar.open {
-                transform: translateX(0);
-            }
-
-            .main-content {
-                margin-left: 0;
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .top-nav {
-                padding: 0 1rem;
-            }
-
-            .nav-controls {
-                gap: 0.75rem;
-            }
-
-            .device-selector select {
-                min-width: 120px;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .main-content {
-                padding: 1rem;
-            }
-
-            #map {
-                height: 400px;
-            }
-        }
-
-        /* ============================================================
-           🎨 BADGES
-           ============================================================ */
-        .badge {
-            display: inline-block;
-            padding: 0.3rem 0.6rem;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .badge.success {
-            background: var(--accent-success);
-            color: #000;
-        }
-
-        .badge.warning {
-            background: var(--accent-warning);
-            color: #000;
-        }
-
-        .badge.danger {
-            background: var(--accent-danger);
-            color: #fff;
-        }
-
-        .badge.info {
-            background: var(--accent-primary);
-            color: #000;
-        }
-
-        /* ============================================================
-           🎬 LOADING
-           ============================================================ */
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid var(--border-color);
-            border-top-color: var(--accent-primary);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* ============================================================
-           📊 INFO TABLE
-           ============================================================ */
-        .info-table {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 0.75rem;
-            background: var(--bg-secondary);
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-        }
-
-        .info-label {
-            color: var(--text-secondary);
-            font-weight: 500;
-            font-size: 0.9rem;
-        }
-
-        .info-value {
-            font-family: 'JetBrains Mono', monospace;
-            color: var(--text-primary);
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        /* ============================================================
-           🎨 UTILITIES
-           ============================================================ */
-        .hidden {
-            display: none !important;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        .mb-1 {
-            margin-bottom: 1rem;
-        }
-
-        .mb-2 {
-            margin-bottom: 2rem;
-        }
-
-        .flex-between {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        /* ============================================================
-           🎭 PHOTO GALLERY
-           ============================================================ */
-        #photoMain {
-            width: 100%;
-            height: 350px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            object-fit: contain;
-            margin-bottom: 1rem;
-        }
-
-        #thumbStrip {
-            display: flex;
-            gap: 0.75rem;
-            overflow-x: auto;
-            padding-bottom: 0.75rem;
-        }
-
-        .thumb {
-            width: 100px;
-            height: 75px;
-            border-radius: 8px;
-            border: 2px solid var(--border-color);
-            object-fit: cover;
-            cursor: pointer;
-            flex-shrink: 0;
-            transition: var(--transition);
-        }
-
-        .thumb:hover,
-        .thumb.active {
-            border-color: var(--accent-primary);
-            transform: scale(1.05);
-        }
-
-        /* ============================================================
-           🎨 SCROLLBAR
-           ============================================================ */
-        ::-webkit-scrollbar {
-            width: 10px;
-            height: 10px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--bg-secondary);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--accent-primary);
-            border-radius: 5px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--accent-secondary);
-        }
-
-        /* ============================================================
-           🎨 ANALYSIS BOX
-           ============================================================ */
-        .analysis-box {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 1.25rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            max-height: 350px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            color: var(--text-secondary);
-            line-height: 1.7;
-        }
-
-        /* ============================================================
-           🎨 PLAYBACK CONTROLS
-           ============================================================ */
-        input[type="range"] {
-            flex: 1;
-            min-width: 200px;
-            height: 6px;
-            background: var(--bg-secondary);
-            border-radius: 4px;
-            outline: none;
-            -webkit-appearance: none;
-            appearance: none;
-            border: 1px solid var(--border-color);
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 16px;
-            height: 16px;
-            background: var(--accent-primary);
-            border-radius: 50%;
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
-        }
-
-        input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-        }
-
-        /* ============================================================
-           🎨 FORM GROUP
-           ============================================================ */
-        .form-group {
-            margin-bottom: 1.25rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.6rem;
-            color: var(--text-primary);
-            font-weight: 500;
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-        }
-
-        textarea {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            padding: 0.75rem;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            font-family: inherit;
-            resize: vertical;
-            min-height: 100px;
-        }
-
-        textarea:focus {
-            outline: none;
-            border-color: var(--accent-primary);
-            box-shadow: 0 0 10px rgba(0, 245, 255, 0.2);
-        }
-
-        /* ============================================================
-           💬 CHAT & COMMAND PANEL
-           ============================================================ */
-        .command-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .cmd-btn {
-            background: rgba(21, 25, 51, 0.8);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            padding: 1rem;
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
-            cursor: pointer;
-            transition: var(--transition);
-        }
-
-        .cmd-btn:hover {
-            border-color: var(--accent-primary);
-            background: rgba(0, 245, 255, 0.1);
-            transform: translateY(-3px);
-        }
-
-        .cmd-btn:active {
-            transform: translateY(0);
-        }
-
-        .cmd-btn i {
-            font-size: 1.5rem;
-            color: var(--accent-primary);
-        }
-
-        .cmd-btn.danger:hover {
-            border-color: var(--accent-danger);
-            background: rgba(239, 68, 68, 0.1);
-        }
-
-        .cmd-btn.danger i {
-            color: var(--accent-danger);
-        }
-
-        .chat-container {
-            display: flex;
-            flex-direction: column;
-            height: 400px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-
-        .chat-msg {
-            max-width: 80%;
-            padding: 0.75rem 1rem;
-            border-radius: 12px;
-            font-size: 0.9rem;
-            line-height: 1.4;
-            position: relative;
-        }
-
-        .chat-msg.sent {
-            align-self: flex-end;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            color: #000;
-            border-bottom-right-radius: 2px;
-        }
-
-        .chat-msg.received {
-            align-self: flex-start;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-bottom-left-radius: 2px;
-        }
-
-        .chat-input-area {
-            padding: 1rem;
-            background: var(--bg-secondary);
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            gap: 0.75rem;
-        }
-
-        .chat-input-area input {
-            flex: 1;
-            background: var(--bg-primary);
-            border: 1px solid var(--border-color);
-            padding: 0.75rem;
-            border-radius: 8px;
-            color: var(--text-primary);
-        }
-
-        .chat-input-area button {
-            width: 45px;
-            height: 45px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-        }
-
-        .status-ring {
-            position: relative;
-            width: 100px;
-            height: 100px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .status-ring svg {
-            transform: rotate(-90deg);
-            width: 100%;
-            height: 100%;
-        }
-
-        .status-ring circle {
-            fill: none;
-            stroke-width: 8;
-            stroke-linecap: round;
-        }
-
-        .status-ring .bg {
-            stroke: var(--bg-secondary);
-        }
-
-        .status-ring .progress {
-            stroke: var(--accent-primary);
-            transition: stroke-dashoffset 1s ease-in-out;
-        }
-
-        /* -------------------- PREMIUM MARKERS -------------------- */
-        .premium-marker {
-            position: relative;
-            pointer-events: none !important;
-        }
-
-        .marker-pulse {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            border: 2px solid #fff;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            animation: pulse-ring 2s infinite;
-        }
-
-        .marker-label {
-            position: absolute;
-            top: -22px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.85);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 10px;
-            font-weight: 600;
-            color: #fff;
-            white-space: nowrap;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(4px);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        @keyframes pulse-ring {
-            0% {
-                transform: translate(-50%, -50%) scale(0.8);
-                opacity: 1;
-            }
-
-            100% {
-                transform: translate(-50%, -50%) scale(2.5);
-                opacity: 0;
-            }
-        }
-    </style>
+    <!-- Watchmen Elite Design System -->
+    <link rel="stylesheet" href="/static/css/watchmen-elite.css?v=2.5">
 </head>
 
 <body>
-    <!-- ============================================================
-         🎯 TOP NAVIGATION
-         ============================================================ -->
-    <div class="top-nav">
-        <div class="logo">
-            <img src="/static/logo_watchmen.png" alt="Watchmen Logo" style="height: 50px;">
-            <div class="logo-text">
-                <h1>Watchmen Elite</h1>
-                <div class="subtitle">Command & Control Center</div>
-            </div>
-        </div>
+    <div class="app-shell">
 
-        <div class="nav-controls">
-            <div class="device-selector">
-                <i class="fas fa-mobile-alt" style="color: var(--accent-primary);"></i>
-                <select id="deviceSelector">
-                    <option value="">All Devices</option>
-                </select>
-            </div>
-            <button id="requestLocationBtn" class="btn btn-primary btn-sm" style="padding:0.55rem 0.9rem;">
-                <i class="fas fa-satellite"></i> Request Live Location
-            </button>
-
-
-            <div class="connection-status">
-                <div class="status-dot" id="connectionStatus"></div>
-                <span id="connectionText">Connected</span>
-            </div>
-
-            <div class="nav-actions">
-                <button class="nav-btn" id="toggleSidebar" title="Toggle Sidebar">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <button class="nav-btn" title="Send Announcement" id="btnOpenAnnouncementTop">
-                    <i class="fas fa-bullhorn"></i>
-                </button>
-
-
-                <button class="nav-btn" id="toggleFullscreen" title="Fullscreen">
-                    <i class="fas fa-expand"></i>
-                </button>
-                <button class="nav-btn" id="exportDataBtnTop" onclick="exportCSV()" title="Export Data (CSV)">
-                    <i class="fas fa-file-csv"></i>
-                </button>
-                <button class="nav-btn" title="Open Chat" onclick="showDashboardView('alerts')">
-                    <i class="fas fa-comments"></i>
-                </button>
-                <button class="nav-btn" id="settingsBtn" title="Settings">
-                    <i class="fas fa-cog"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ============================================================
-     📱 SIDEBAR NAVIGATION
-     ============================================================ -->
-    <div class="sidebar" id="sidebar">
-
-        <!-- Navigation Section -->
-        <div class="sidebar-section">
-            <div class="sidebar-title">
-                <i class="fas fa-tachometer-alt"></i>
-                Navigation
-            </div>
-            <div class="sidebar-menu">
-                <div class="menu-item active" data-view="dashboard">
-                    <i class="fas fa-th-large"></i>
-                    <span>Dashboard</span>
+        <!-- ============================================================
+             📱 SIDEBAR NAVIGATION (230px Persistent SaaS Navigation)
+             ============================================================ -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-brand-badge">DWEX</div>
+                <div class="sidebar-brand-text">
+                    <h1>Watchmen Elite</h1>
+                    <div class="brand-subtitle">Command & Control</div>
                 </div>
-                <div class="menu-item" data-view="map">
+            </div>
+
+            <nav class="sidebar-nav">
+                <!-- Overview Group -->
+                <div class="sidebar-section-title">OVERVIEW</div>
+
+                <div class="menu-item active" data-view="dashboard" title="Operational Overview">
+                    <i class="fas fa-th-large"></i>
+                    <span>Overview</span>
+                </div>
+
+                <div class="menu-item" data-view="map" title="Live Fleet Tracking">
                     <i class="fas fa-map-marked-alt"></i>
                     <span>Live Tracking</span>
                 </div>
-                <div class="menu-item" data-view="analytics">
-                    <i class="fas fa-chart-bar"></i>
-                    <span>Analytics</span>
+
+                <div class="menu-item" data-view="devices" title="Device Management">
+                    <i class="fas fa-mobile-alt"></i>
+                    <span>Devices</span>
                 </div>
-                <div class="menu-item" data-view="alerts">
+
+                <div class="menu-item" data-view="commands" title="Command Center">
+                    <i class="fas fa-terminal"></i>
+                    <span>Command Center</span>
+                </div>
+
+                <div class="menu-item" data-view="geofences" title="Geofences">
+                    <i class="fas fa-draw-polygon"></i>
+                    <span>Geofences</span>
+                </div>
+
+                <div class="menu-item" data-view="alerts" title="Alerts Center">
                     <i class="fas fa-bell"></i>
                     <span>Alerts</span>
                     <span class="menu-badge" id="alertBadge">0</span>
                 </div>
-                <div class="menu-item" data-view="incidents">
+
+                <div class="menu-item" data-view="analytics" title="Fleet Analytics">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Analytics</span>
+                </div>
+
+                <div class="menu-item" data-view="reports" title="Operational Reports">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Reports</span>
+                </div>
+
+                <div class="menu-item" data-view="photos" title="Media & Photo Gallery">
+                    <i class="fas fa-camera"></i>
+                    <span>Media</span>
+                </div>
+
+                <!-- Monitoring & Operations Group -->
+                <div class="sidebar-section-title">OPERATIONS</div>
+
+                <div class="menu-item" data-view="incidents" title="Incident Reports">
                     <i class="fas fa-exclamation-triangle"></i>
                     <span>Incidents</span>
                 </div>
-                <div class="menu-item" data-view="announcements">
+
+                <div class="menu-item" data-view="announcements" title="Broadcast Announcements">
                     <i class="fas fa-bullhorn"></i>
                     <span>Announcements</span>
                     <span class="menu-badge" id="annBadge" style="display:none">0</span>
                 </div>
-                <div class="menu-item" data-view="geofences">
-                    <i class="fas fa-draw-polygon"></i>
-                    <span>Geofences</span>
-                </div>
-                <div class="menu-item" data-view="photos">
-                    <i class="fas fa-camera"></i>
-                    <span>Photo Gallery</span>
-                </div>
-                <div class="menu-item" data-view="checkpoints">
+
+                <div class="menu-item" data-view="checkpoints" title="Checkpoints">
                     <i class="fas fa-qrcode"></i>
                     <span>Checkpoints</span>
                 </div>
-                <div class="menu-item" data-view="bugs">
+
+                <div class="menu-item" data-view="bugs" title="Bug & Crash Reports">
                     <i class="fas fa-bug"></i>
                     <span>Bug Reports</span>
                     <span class="menu-badge" id="bugBadge" style="display:none">0</span>
                 </div>
 
-            </div>
-        </div>
+                <!-- System Group -->
+                <div class="sidebar-section-title">SYSTEM</div>
 
-        <!-- Tools Section -->
-        <div class="sidebar-section">
-            <div class="sidebar-title">
-                <i class="fas fa-tools"></i>
-                Tools
-            </div>
-            <div class="sidebar-menu">
-                <div class="menu-item" id="exportDataBtn" onclick="exportCSV()">
-                    <i class="fas fa-download"></i>
-                    <span>Export Data</span>
-                </div>
-                <div class="menu-item" id="playbackBtn">
-                    <i class="fas fa-play-circle"></i>
-                    <span>Playback Mode</span>
-                </div>
-                <div class="menu-item" id="refreshAllBtn">
-                    <i class="fas fa-sync-alt"></i>
-                    <span>Refresh All</span>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-
-    <!-- ============================================================
-         🗺️ MAIN CONTENT
-         ============================================================ -->
-    <div class="main-content" id="mainContent">
-
-        <!-- ============================================================
-     📊 DASHBOARD VIEW
-     ============================================================ -->
-        <div class="view-container active" id="view-dashboard">
-            <div class="view-header">
-                <div class="view-title">
-                    <div
-                        style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
-                        <i class="fas fa-th-large"></i>
-                    </div>
-                    <span>Dashboard Overview</span>
-                </div>
-                <div class="view-actions">
-                    <button class="btn btn-primary" id="refreshDashboard">
-                        <i class="fas fa-sync-alt"></i> Refresh
-                    </button>
-                </div>
-            </div>
-
-
-            <!-- Alert Banner -->
-            <div id="alertBanner" class="hidden"></div>
-
-            <!-- Stats Grid -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <span class="stat-label">Battery Level</span>
-                        <span class="stat-icon">🔋</span>
-                    </div>
-                    <div class="stat-value" id="battery">--%</div>
-                    <div class="stat-change">
-                        <i class="fas fa-arrow-down"></i>
-                        <span>Updated live</span>
-                    </div>
+                <div class="menu-item" data-view="devices" title="Device Management">
+                    <i class="fas fa-server"></i>
+                    <span>Device Management</span>
                 </div>
 
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <span class="stat-label">Daily Steps</span>
-                        <span class="stat-icon">👣</span>
-                    </div>
-                    <div class="stat-value" id="steps">--</div>
-                    <div class="stat-change">
-                        <i class="fas fa-arrow-up"></i>
-                        <span>Today's progress</span>
-                    </div>
+                <div class="menu-item" id="sidebarSettingsBtn" onclick="openSettingsModal()" title="System Settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
                 </div>
 
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <span class="stat-label">Current Speed</span>
-                        <span class="stat-icon">⚡</span>
-                    </div>
-                    <div class="stat-value" id="speed">--</div>
-                    <div class="stat-change">
-                        <i class="fas fa-tachometer-alt"></i>
-                        <span>Real-time</span>
-                    </div>
+                <div class="menu-item" data-view="help" title="Help & Diagnostics">
+                    <i class="fas fa-question-circle"></i>
+                    <span>Help & Support</span>
                 </div>
+            </nav>
 
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <span class="stat-label">Last Update</span>
-                        <span class="stat-icon">🕐</span>
-                    </div>
-                    <div class="stat-value" id="time">--:--</div>
-                    <div class="stat-change">
-                        <i class="fas fa-clock"></i>
-                        <span id="deviceId">--</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Map + Sidebar Layout -->
-            <div class="grid-2">
-                <!-- Map Card -->
-                <div class="map-container" style="grid-column: span 1;">
-                    <div class="map-header">
-                        <div class="map-title">
-                            <i class="fas fa-map-marked-alt"></i>
-                            Live Location Tracking
-                        </div>
-                        <div class="map-controls">
-                            <button class="btn btn-sm" id="resetView">
-                                <i class="fas fa-crosshairs"></i>
-                            </button>
-                            <button class="btn btn-sm" id="drawGeofence">
-                                <i class="fas fa-draw-polygon"></i>
-                            </button>
+            <!-- Bottom Persistent Connection Card -->
+            <div class="sidebar-footer">
+                <div class="backend-status-card">
+                    <div class="backend-status-left">
+                        <div class="status-indicator-dot" id="sidebarStatusDot"></div>
+                        <div class="backend-info-text">
+                            <div class="backend-title">Backend Connected</div>
+                            <div class="backend-host" id="backendHostText">127.0.0.1:8000</div>
                         </div>
                     </div>
-
-                    <div id="map"></div>
-
-                    <div class="map-toolbar">
-                        <div class="toolbar-group">
-                            <label><i class="far fa-clock"></i></label>
-                            <select id="rangeSel">
-                                <option value="15">Last 15m</option>
-                                <option value="60" selected>Last 1h</option>
-                                <option value="360">Last 6h</option>
-                                <option value="1440">Last 24h</option>
-                                <option value="0">All Time</option>
-                            </select>
-                        </div>
-
-                        <div class="toolbar-group">
-                            <label>Points</label>
-                            <input id="countInput" type="number" min="1" max="50000" value="200" />
-                        </div>
-
-                        <div class="toolbar-group">
-                            <label><input type="checkbox" id="toggleTrail" checked /> Trail</label>
-                            <label><input type="checkbox" id="toggleFollow" checked /> Follow</label>
-                        </div>
-
-                        <button class="btn btn-primary" id="reloadBtn">
-                            <i class="fas fa-sync-alt"></i> Reload
-                        </button>
-                    </div>
-
-                    <!-- Playback Controls -->
-                    <div class="map-toolbar">
-                        <label style="flex-shrink: 0;">Playback:</label>
-                        <input type="range" id="playSlider" min="0" max="100" value="0">
-                        <button class="btn" id="playToggle"><i class="fas fa-play"></i> Play</button>
-                    </div>
-                </div>
-
-                <!-- Device Info Card -->
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <i class="fas fa-info-circle"></i>
-                            Device Information
-                        </div>
-                    </div>
-                    <div class="info-table">
-                        <div class="info-row">
-                            <span class="info-label">GPS Accuracy</span>
-                            <span class="info-value" id="accuracy">-- m</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Altitude</span>
-                            <span class="info-value" id="altitude">-- m</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Bearing</span>
-                            <span class="info-value" id="bearing">--°</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Tracking State</span>
-                            <span class="info-value" id="trackingState">--</span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Connection</span>
-                            <span class="info-value" id="offlineStatus">
-                                <i class="fas fa-wifi" style="color: var(--accent-success);"></i> Online
-                            </span>
-                        </div>
-                        <div class="info-row">
-                            <span class="info-label">Total Points</span>
-                            <span class="info-value" id="pointCount">0</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Command & Chat Grid -->
-                <div class="card" style="margin-top: 1.5rem;">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <i class="fas fa-terminal"></i>
-                            Command Center
-                        </div>
-                    </div>
-
-                    <div class="grid-2">
-                        <!-- Quick Actions -->
-                        <div>
-                            <h4 class="mb-1"
-                                style="color:var(--text-secondary); text-transform:uppercase; font-size:0.8rem; letter-spacing:1px;">
-                                Remote Actions</h4>
-                            <div class="command-grid">
-                                <button class="cmd-btn danger" onclick="sendCommand('START_SIREN')">
-                                    <i class="fas fa-bullhorn"></i>
-                                    <span>Trigger Siren</span>
-                                </button>
-                                <button class="cmd-btn" onclick="sendCommand('GET_LOCATION')">
-                                    <i class="fas fa-crosshairs"></i>
-                                    <span>Force Location</span>
-                                </button>
-                                <button class="cmd-btn" onclick="sendCommand('WIPE_CACHE')">
-                                    <i class="fas fa-trash-alt"></i>
-                                    <span>Wipe Cache</span>
-                                </button>
-                                <button class="cmd-btn" onclick="sendCommand('RESTART_SERVICE')">
-                                    <i class="fas fa-power-off"></i>
-                                    <span>Restart Service</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- 2-Way Chat -->
-                        <div>
-                            <h4 class="mb-1"
-                                style="color:var(--text-secondary); text-transform:uppercase; font-size:0.8rem; letter-spacing:1px;">
-                                Secure Comm Channel</h4>
-                            <div class="chat-container">
-                                <div class="chat-messages" id="chatMessages">
-                                    <div class="chat-msg received">
-                                        Device connected. Secure channel established.
-                                        <div style="font-size:0.7rem; opacity:0.7; margin-top:4px;">System • Now</div>
-                                    </div>
-                                </div>
-                                <div class="chat-input-area">
-                                    <input type="text" id="chatInput" placeholder="Type instructions..." />
-                                    <button class="btn btn-primary" onclick="sendMessage()">
-                                        <i class="fas fa-paper-plane"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Activity Chart -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">
-                        <i class="fas fa-chart-line"></i>
-                        Activity Timeline
-                    </div>
-                </div>
-                <div class="chart-container">
-                    <canvas id="activityChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- ============================================================
-     🗺️ MAP VIEW
-     ============================================================ -->
-        <div class="view-container" id="view-map">
-            <div class="view-header">
-                <div class="view-title">
-                    <div
-                        style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
-                        <i class="fas fa-map-marked-alt"></i>
-                    </div>
-                    <span>Live Tracking Map</span>
-                </div>
-            </div>
-            <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Full-screen map view coming
-                soon...</p>
-        </div>
-        <!-- ============================================================
-     🐞 BUG REPORTS VIEW
-    ============================================================ -->
-        <div class="view-container" id="view-bugs">
-            <div class="view-header">
-                <div class="view-title">
-                    <div
-                        style="width:50px;height:50px;background:linear-gradient(135deg,var(--accent-primary),var(--accent-secondary));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">
-                        <i class="fas fa-bug"></i>
-                    </div>
-                    <span>Bug Reports</span>
-                </div>
-
-                <div class="view-actions">
-                    <button class="btn btn-primary" id="refreshBugs">
-                        <i class="fas fa-sync-alt"></i> Refresh
-                    </button>
-                </div>
-            </div>
-
-            <!-- Summary Stats -->
-            <div class="stats-row">
-                <div class="stat-card red">Critical<br><span id="statBugCritical">0</span></div>
-                <div class="stat-card orange">High<br><span id="statBugHigh">0</span></div>
-                <div class="stat-card purple">Medium<br><span id="statBugMedium">0</span></div>
-                <div class="stat-card green">Low<br><span id="statBugLow">0</span></div>
-            </div>
-
-            <!-- Bug List -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">
-                        <i class="fas fa-list"></i>
-                        Recent Bug Reports
-                    </div>
-                </div>
-                <div id="bugList" class="list-container"></div>
-            </div>
-        </div>
-
-        <!-- ============================================================
-     📊 ANALYTICS VIEW
-     ============================================================ -->
-        <div class="view-container" id="view-analytics">
-            <div class="view-header">
-                <div class="view-title">
-                    <div
-                        style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
-                        <i class="fas fa-chart-bar"></i>
-                    </div>
-                    <span>Analytics Dashboard</span>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="tabs">
-                    <button class="tab active" data-tab="summary">Summary</button>
-                    <button class="tab" data-tab="battery">Battery</button>
-                    <button class="tab" data-tab="distance">Distance</button>
-                    <button class="tab" data-tab="states">States</button>
-                </div>
-
-                <div class="tab-content active" id="tab-summary">
-                    <div class="flex-between mb-1">
-                        <button class="btn btn-primary" id="loadSummary">
-                            <i class="fas fa-route"></i> Load Summary
-                        </button>
-                        <button class="btn" id="loadAnomalies">
-                            <i class="fas fa-exclamation-triangle"></i> Anomalies
-                        </button>
-                    </div>
-                    <div class="analysis-box" id="summaryBox">Click "Load Summary" to view route analytics...</div>
-                    <div class="analysis-box" id="anomaliesBox" style="margin-top: 1rem;">Click "Anomalies" to detect
-                        anomalies...</div>
-
-                </div>
-
-                <div class="tab-content" id="tab-battery">
-                    <button class="btn btn-primary" id="loadBattery">
-                        <i class="fas fa-battery-three-quarters"></i> Load Battery Stats
-                    </button>
-                    <div class="analysis-box" id="batteryBox">Loading...</div>
-                </div>
-
-                <div class="tab-content" id="tab-distance">
-                    <button class="btn btn-primary" id="loadDistance">
-                        <i class="fas fa-route"></i> Load Distance Stats
-                    </button>
-                    <div class="analysis-box" id="distanceBox">Loading...</div>
-                </div>
-
-                <div class="tab-content" id="tab-states">
-                    <button class="btn btn-primary" id="loadStates">
-                        <i class="fas fa-chart-pie"></i> Load State Distribution
-                    </button>
-                    <div class="analysis-box" id="statesBox">Loading...</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ============================================================
-     🔔 ALERTS VIEW
-     ============================================================ -->
-        <div class="view-container" id="view-alerts">
-            <div class="view-header">
-                <div class="view-title">
-                    <div
-                        style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
-                        <i class="fas fa-bell"></i>
-                    </div>
-                    <span>Alert Management</span>
-                </div>
-                <div class="view-actions">
-                    <button class="btn btn-primary" id="refreshAlerts">
-                        <i class="fas fa-sync-alt"></i> Refresh
-                    </button>
-                </div>
-            </div>
-            <div class="stats-row">
-                <div class="stat-card green">Live<br><span id="statLive">0</span></div>
-                <div class="stat-card red">Failed<br><span id="statFailed">0</span></div>
-                <div class="stat-card purple">Spoof<br><span id="statSpoof">0</span></div>
-                <div class="stat-card orange">Override<br><span id="statOverride">0</span></div>
-                <div class="stat-card yellow">Avg Speed<br><span id="statAvgSpeed">--</span></div>
-
-            </div>
-            <div class="grid-2">
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <i class="fas fa-exclamation-circle"></i>
-                            Recent Alerts
-                        </div>
-                    </div>
-                    <div id="alertsHistory" class="list-container"></div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <i class="fas fa-shield-alt"></i>
-                            Security Alerts
-                        </div>
-                    </div>
-                    <div id="securityAlerts" class="list-container"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ============================================================
-     📋 INCIDENTS VIEW
-     ============================================================ -->
-        <div class="view-container" id="view-incidents">
-            <div class="view-header">
-                <div class="view-title">
-                    <div
-                        style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
-                        <i class="fas fa-exclamation-triangle"></i>
-                    </div>
-                    <span>Incident Reports</span>
-                </div>
-                <div class="view-actions">
-                    <button class="btn btn-primary" id="loadIncidents">
-                        <i class="fas fa-sync-alt"></i> Load Incidents
-                    </button>
-                </div>
-            </div>
-
-            <div class="card">
-                <div id="incidentsBox" class="list-container"></div>
-            </div>
-        </div>
-        <!-- ============================================================
-    📣 ANNOUNCEMENTS VIEW
-    ============================================================ -->
-        <div class="view-container" id="view-announcements">
-            <div class="view-header">
-                <div class="view-title">
-                    <div
-                        style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
-                        <i class="fas fa-bullhorn"></i>
-                    </div>
-                    <div>
-                        <div>Announcements Center</div>
-                        <small style="color: var(--text-secondary); font-size: 0.8rem;">
-                            Broadcast messages to Watchmen devices and monitor delivery
-                        </small>
-                    </div>
-                </div>
-                <div class="view-actions">
-                    <button class="btn btn-primary" id="btnOpenAnnouncementMain">
-                        <i class="fas fa-plus"></i> New Announcement
-                    </button>
-
-                    <button class="btn" id="refreshAnnouncements">
-                        <i class="fas fa-rotate"></i> Refresh
-                    </button>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">
-                        <i class="fas fa-list"></i> Recent Announcements (last 24h)
-                    </div>
-                </div>
-                <div id="announcementsList">
-                    <!-- filled by JS -->
-                </div>
-            </div>
-        </div>
-
-        <!-- ============================================================
-     🗺️ GEOFENCES VIEW
-     ============================================================ -->
-        <div class="view-container" id="view-geofences">
-            <div class="view-header">
-                <div class="view-title">
-                    <div
-                        style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
-                        <i class="fas fa-draw-polygon"></i>
-                    </div>
-                    <span>Geofence Management</span>
-                </div>
-                <div class="view-actions">
-                    <button class="btn btn-primary" id="manageGeofences">
-                        <i class="fas fa-layer-group"></i> Manage Zones
-                    </button>
-                </div>
-            </div>
-
-            <div class="grid-2">
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <i class="fas fa-history"></i>
-                            Zone Activity
-                        </div>
-                    </div>
-                    <div id="geofenceEvents" class="list-container"></div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <i class="fas fa-map-pin"></i>
-                            Active Geofences
-                        </div>
-                    </div>
-                    <div id="geofenceList" class="list-container"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ============================================================
-     📷 PHOTOS VIEW
-     ============================================================ -->
-        <div class="view-container" id="view-photos">
-            <div class="view-header">
-                <div class="view-title">
-                    <div
-                        style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
-                        <i class="fas fa-camera"></i>
-                    </div>
-                    <span>Photo Gallery</span>
-                </div>
-                <div class="view-actions">
-                    <button class="btn btn-primary" id="refreshPhotos">
-                        <i class="fas fa-sync-alt"></i> Refresh
-                    </button>
-                </div>
-            </div>
-
-            <div class="card">
-                <img id="photoMain" alt="No photos available">
-                <div id="thumbStrip"></div>
-                <div class="map-toolbar">
-                    <select id="photoLimit">
-                        <option value="5">5 photos</option>
-                        <option value="10" selected>10 photos</option>
-                        <option value="20">20 photos</option>
-                        <option value="50">50 photos</option>
-                    </select>
-                    <a id="downloadPhoto" href="#" download style="margin-left: auto;">
-                        <button class="btn"><i class="fas fa-download"></i> Download</button>
+                    <a href="/health" target="_blank" class="backend-status-link" title="Open Health API Diagnostics">
+                        <i class="fas fa-external-link-alt"></i>
                     </a>
                 </div>
             </div>
-        </div>
+        </aside>
 
         <!-- ============================================================
-     📍 CHECKPOINTS VIEW
-     ============================================================ -->
-        <div class="view-container" id="view-checkpoints">
-            <div class="view-header">
-                <div class="view-title">
-                    <div
-                        style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
-                        <i class="fas fa-qrcode"></i>
-                    </div>
-                    <span>Checkpoint Visits</span>
-                </div>
-                <div class="view-actions">
-                    <button class="btn btn-primary" id="loadCheckpoints">
-                        <i class="fas fa-sync-alt"></i> Load Checkpoints
+             🎯 MAIN APPLICATION AREA (TOP BAR + CONTENT WRAPPER)
+             ============================================================ -->
+        <div class="app-main" id="mainContent">
+
+            <!-- Top Navigation Bar (60px) -->
+            <header class="top-nav">
+                <div class="top-nav-left">
+                    <button class="nav-toggle-btn" id="toggleSidebar" title="Toggle Sidebar">
+                        <i class="fas fa-bars"></i>
                     </button>
+                    <div class="global-search-container">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="globalSearchInput" class="search-input"
+                            placeholder="Search devices, locations, incidents..." />
+                        <span class="search-shortcut-badge">Ctrl K</span>
+                    </div>
                 </div>
-            </div>
 
-            <div class="card">
-                <div id="checkpointsBox" class="list-container"></div>
-            </div>
+                <div class="top-nav-right">
+                    <!-- Live System Status Indicator -->
+                    <div class="system-status-indicator">
+                        <div class="dot" id="connectionStatus"></div>
+                        <span id="connectionText">System Online</span>
+                    </div>
+
+                    <!-- Device Selector Dropdown -->
+                    <div class="top-device-select-wrap">
+                        <i class="fas fa-mobile-alt"></i>
+                        <select id="deviceSelector" title="Select Active Device">
+                            <option value="">All Devices</option>
+                        </select>
+                        <span class="scope-tag" id="topScopeTag">Fleet</span>
+                    </div>
+
+                    <!-- Notification Bell with dynamic badge -->
+                    <button class="nav-icon-btn" onclick="switchView('alerts')" title="View Alerts">
+                        <i class="far fa-bell"></i>
+                        <span class="nav-icon-badge" id="topAlertBadge">4</span>
+                    </button>
+
+                    <!-- Theme Toggle -->
+                    <button class="nav-icon-btn" id="themeToggleBtn" onclick="toggleThemeMode()" title="Toggle Theme">
+                        <i class="far fa-moon" id="themeIcon"></i>
+                    </button>
+
+                    <!-- User Profile & Sign Out Widget -->
+                    <div class="user-profile-pill-wrap" style="display: flex; align-items: center; gap: 8px;">
+                        <div class="user-profile-pill" id="userProfilePill" title="User Profile" onclick="openSettingsModal()">
+                            <div class="user-avatar-circle" id="userAvatarCircle">--</div>
+                            <div class="user-details">
+                                <span class="user-name" id="userNameText">Loading...</span>
+                                <span class="user-role" id="userRoleText">Operator</span>
+                            </div>
+                        </div>
+                        <button class="nav-icon-btn" id="logoutBtn" onclick="handleLogout()" title="Sign Out" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.25); background: rgba(239, 68, 68, 0.08);">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+
+                    <!-- Hidden original action buttons for full JS event compatibility -->
+                    <div style="display: none;" id="overviewHiddenCompat">
+                        <div id="overviewHeaderControls" class="overview-device-control">
+                            <div id="overviewDatePill" class="info-pill overview-device-control"><span
+                                    id="topLiveDate">Sun, 7 Sep 2025</span></div>
+                            <div id="overviewTimePill" class="info-pill overview-device-control"><span
+                                    id="topLiveTime">04:20 AM</span></div>
+                            <button id="requestLocationBtn"
+                                class="btn-saas btn-saas-primary overview-device-control"></button>
+                            <select id="rangeSel" class="saas-select-pill overview-device-control">
+                                <option value="1440" selected>Last 24 Hours</option>
+                            </select>
+                            <button id="refreshDashboard"
+                                class="btn-saas btn-saas-secondary overview-device-control"></button>
+                        </div>
+                        <!-- Legacy Overview Panels & Telemetry IDs for full JS compatibility -->
+                        <div id="panelFleetStatus">
+                            <span id="fleetStatTotal"></span>
+                            <span id="fleetStatOnline"></span>
+                            <span id="fleetStatWarning"></span>
+                            <span id="fleetStatCritical"></span>
+                            <span id="fleetStatOffline"></span>
+                            <span id="fleetStatTracking"></span>
+                            <span id="fleetStatIdle"></span>
+                            <div id="fleetRecentEvents"></div>
+                        </div>
+                        <div id="panelDeviceInfo">
+                            <span id="deviceId"></span>
+                            <span id="deviceModel"></span>
+                            <span id="offlineStatus"></span>
+                            <span id="time"></span>
+                            <span id="battery"></span>
+                            <span id="speed"></span>
+                            <span id="altitude"></span>
+                            <span id="accuracy"></span>
+                            <span id="bearing"></span>
+                            <span id="trackingState"></span>
+                            <span id="steps"></span>
+                            <span id="pointCount"></span>
+                        </div>
+                        <button id="toggleFullscreen"></button>
+                        <button id="exportDataBtnTop" onclick="exportCSV()"></button>
+                        <button id="btnOpenAnnouncementTop"></button>
+                        <button id="settingsBtn"></button>
+                        <button id="refreshAllBtn"></button>
+                        <button id="playbackBtn"></button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Content Container -->
+            <main class="main-content">
+
+                <!-- Alert Notification Banner (if any) -->
+                <div id="alertBanner" class="hidden"></div>
+
+                <!-- ============================================================
+                     📊 1. OPERATIONAL OVERVIEW VIEW (#view-dashboard)
+                     ============================================================ -->
+                <section class="view-container active" id="view-dashboard">
+                    <!-- Page Header Row -->
+                    <div class="page-header-row">
+                        <div>
+                            <div class="greeting-text">
+                                <span>Good Morning, Shreyas</span>
+                                <span>👋</span>
+                            </div>
+                            <h2 class="page-title">Operational Overview</h2>
+                            <p class="page-subtitle" id="overviewSubtitle">Monitor your devices, track live locations
+                                and manage security operations</p>
+                        </div>
+                    </div>
+
+                    <!-- 4 KPI Cards Grid -->
+                    <div class="kpi-grid">
+                        <!-- Card 1: Total Devices -->
+                        <div class="kpi-card" onclick="switchView('devices')" style="cursor: pointer;">
+                            <div class="kpi-card-top">
+                                <div class="kpi-icon-wrap kpi-icon-emerald">
+                                    <i class="fas fa-mobile-alt"></i>
+                                </div>
+                                <span class="kpi-card-title" id="kpiTitleTotalDevices">Total Devices</span>
+                                <i class="fas fa-arrow-up-right-from-square kpi-corner-arrow"></i>
+                            </div>
+                            <div class="kpi-value" id="kpiTotalDevices">1</div>
+                            <div class="kpi-subtext" id="kpiSubtextTotalDevices">
+                                <span class="dot-online"><i class="fas fa-circle" style="font-size: 8px;"></i> <span
+                                        id="kpiOnlineDevices">1</span> Online</span>
+                                <span><span id="kpiOfflineDevices">0</span> Offline</span>
+                            </div>
+                        </div>
+
+                        <!-- Card 2: Active Tracking -->
+                        <div class="kpi-card" onclick="switchView('map')" style="cursor: pointer;">
+                            <div class="kpi-card-top">
+                                <div class="kpi-icon-wrap kpi-icon-emerald">
+                                    <i class="fas fa-tower-broadcast"></i>
+                                </div>
+                                <span class="kpi-card-title" id="kpiTitleActiveTracking">Active Tracking</span>
+                                <i class="fas fa-arrow-up-right-from-square kpi-corner-arrow"></i>
+                            </div>
+                            <div class="kpi-value" id="kpiActiveTracking">1</div>
+                            <div class="kpi-subtext" id="kpiSubtextActiveTracking">
+                                <span class="dot-online">↑ 1 Currently Tracking</span>
+                            </div>
+                        </div>
+
+                        <!-- Card 3: Active Alerts -->
+                        <div class="kpi-card" onclick="switchView('alerts')" style="cursor: pointer;">
+                            <div class="kpi-card-top">
+                                <div class="kpi-icon-wrap kpi-icon-crimson">
+                                    <i class="fas fa-bell"></i>
+                                </div>
+                                <span class="kpi-card-title" id="kpiTitleActiveAlerts">Active Alerts</span>
+                                <i class="fas fa-arrow-up-right-from-square kpi-corner-arrow"></i>
+                            </div>
+                            <div class="kpi-value" id="kpiActiveAlerts">4</div>
+                            <div class="kpi-subtext" id="kpiSubtextActiveAlerts">
+                                <span class="dot-alert">↑ 1 Critical · 3 Other</span>
+                            </div>
+                        </div>
+
+                        <!-- Card 4: Geofences -->
+                        <div class="kpi-card" onclick="switchView('geofences')" style="cursor: pointer;">
+                            <div class="kpi-card-top">
+                                <div class="kpi-icon-wrap kpi-icon-blue">
+                                    <i class="fas fa-draw-polygon"></i>
+                                </div>
+                                <span class="kpi-card-title" id="kpiTitleGeofences">Geofences</span>
+                                <i class="fas fa-arrow-up-right-from-square kpi-corner-arrow"></i>
+                            </div>
+                            <div class="kpi-value" id="kpiGeofences">12</div>
+                            <div class="kpi-subtext" id="kpiSubtextGeofences">
+                                <span class="dot-active"><i class="fas fa-circle" style="font-size: 8px;"></i> <span
+                                        id="kpiActiveGeofences">3</span> Active</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Operational Overview — Main Split Grid (62% Map / 38% Device Info) -->
+                    <div class="overview-main-split">
+                        <!-- Live Location Map Card -->
+                        <div class="saas-card">
+                            <div class="saas-card-header">
+                                <div class="saas-card-title">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span id="overviewMapTitle">Live Fleet Map</span>
+                                    <span id="overviewMapScopeText"
+                                        style="font-size: 11px; color: var(--text-muted); font-weight: 500; margin-left: 6px;">1
+                                        Online · 0 Offline</span>
+                                </div>
+                                <div class="saas-card-actions">
+                                    <div class="status-badge-live" id="overviewMapBadge">
+                                        <div class="live-dot"></div>
+                                        <span id="overviewMapBadgeText">Live</span>
+                                    </div>
+                                    <button class="card-action-icon" id="resetView" title="Center Map">
+                                        <i class="fas fa-crosshairs"></i>
+                                    </button>
+                                    <button class="card-action-icon" id="drawGeofence" title="Draw Geofence">
+                                        <i class="fas fa-draw-polygon"></i>
+                                    </button>
+                                    <button class="card-action-icon" onclick="switchView('map')"
+                                        title="Fullscreen Map Workspace">
+                                        <i class="fas fa-expand"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="map-canvas-container">
+                                <div id="map"></div>
+                                <button class="map-locate-me-btn" onclick="focusActiveDevice()">
+                                    <i class="fas fa-location-crosshairs"></i>
+                                    <span>Locate Me</span>
+                                </button>
+                            </div>
+
+                            <!-- Integrated Toolbar & Controls (Hidden or Accessible) -->
+                            <div style="display:none;">
+                                <input id="countInput" type="number" min="1" max="50000" value="200" />
+                                <input type="checkbox" id="toggleTrail" checked />
+                                <input type="checkbox" id="toggleFollow" checked />
+                                <button id="reloadBtn"></button>
+                                <input type="range" id="playSlider" min="0" max="100" value="0">
+                                <button id="playToggle"></button>
+                            </div>
+                        </div>
+
+                        <!-- Overview Dynamic Right Panel (Fleet Activity / Device Activity Carousel) -->
+                        <div class="saas-card" id="overviewActivityCard">
+                            <div class="saas-card-header">
+                                <div class="saas-card-title">
+                                    <i class="fas fa-wave-pulse" id="overviewPanelIcon"
+                                        style="color: var(--color-primary);"></i>
+                                    <span id="overviewPanelTitle">Fleet Activity</span>
+                                </div>
+                                <div class="saas-card-actions">
+                                    <a href="javascript:void(0)" class="card-link-action" id="overviewPanelAction"
+                                        onclick="handleOverviewPanelAction()">
+                                        <span id="overviewPanelActionText">View All</span>
+                                        <i class="fas fa-arrow-right"></i>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="activity-carousel-wrapper" id="overviewActivityCarousel">
+                                <div class="activity-slides-viewport">
+                                    <div class="activity-slides-track" id="activitySlidesTrack">
+                                        <!-- Slide 1: Current Activity -->
+                                        <div class="activity-slide active" id="slideCurrentActivity">
+                                            <div class="activity-slide-header">
+                                                <span class="activity-section-label">
+                                                    <span class="status-dot status-dot-online"
+                                                        style="box-shadow: 0 0 6px var(--accent-success);"></span>
+                                                    <span>CURRENT ACTIVITY</span>
+                                                </span>
+                                                <span class="activity-slide-scope-badge"
+                                                    id="currentActivityScopeBadge">Fleet Overview</span>
+                                            </div>
+                                            <div class="activity-metrics-list" id="currentActivityContent">
+                                                <!-- Dynamically populated -->
+                                            </div>
+                                        </div>
+
+                                        <!-- Slide 2: Movement -->
+                                        <div class="activity-slide" id="slideMovement">
+                                            <div class="activity-slide-header">
+                                                <span class="activity-section-label">
+                                                    <i class="fas fa-gauge-high"
+                                                        style="color: var(--accent-primary);"></i>
+                                                    <span>MOVEMENT</span>
+                                                </span>
+                                                <span class="activity-slide-scope-badge" id="movementScopeBadge">Live
+                                                    Telemetry</span>
+                                            </div>
+                                            <div class="activity-metrics-list" id="movementContent">
+                                                <!-- Dynamically populated -->
+                                            </div>
+                                        </div>
+
+                                        <!-- Slide 3: Latest -->
+                                        <div class="activity-slide" id="slideLatest">
+                                            <div class="activity-slide-header">
+                                                <span class="activity-section-label">
+                                                    <i class="fas fa-clock-rotate-left"
+                                                        style="color: var(--accent-info);"></i>
+                                                    <span>LATEST</span>
+                                                </span>
+                                                <span class="activity-slide-scope-badge" id="latestScopeBadge">Recent
+                                                    Events</span>
+                                            </div>
+                                            <div class="activity-event-list" id="latestContent">
+                                                <!-- Dynamically populated -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Carousel Footer Controls -->
+                                <div class="activity-carousel-footer">
+                                    <span id="activitySlideCounter" class="activity-carousel-counter">1 / 3</span>
+                                    <div class="activity-carousel-dots" id="activityCarouselDots">
+                                        <span class="activity-carousel-dot active" onclick="goToActivitySlide(0)"
+                                            title="Current Activity"></span>
+                                        <span class="activity-carousel-dot" onclick="goToActivitySlide(1)"
+                                            title="Movement"></span>
+                                        <span class="activity-carousel-dot" onclick="goToActivitySlide(2)"
+                                            title="Latest"></span>
+                                    </div>
+                                    <div class="activity-carousel-controls">
+                                        <button class="activity-carousel-nav-btn" onclick="prevActivitySlide()"
+                                            title="Previous slide">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </button>
+                                        <button class="activity-carousel-nav-btn" onclick="nextActivitySlide()"
+                                            title="Next slide">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Operational Overview — Secondary Split (Recent Activity & Alerts) -->
+                    <div class="overview-secondary-split">
+                        <!-- Recent Activity Timeline -->
+                        <div class="saas-card">
+                            <div class="saas-card-header">
+                                <div class="saas-card-title">
+                                    <i class="fas fa-bars-staggered"></i>
+                                    <span>Recent Activity</span>
+                                </div>
+                                <a href="javascript:void(0)" class="card-link-action" onclick="switchView('analytics')">
+                                    <span>View All</span>
+                                    <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </div>
+
+                            <div class="compact-activity-list" id="recentActivityList">
+                                <div class="activity-item-row">
+                                    <div class="activity-icon-bullet activity-icon-location">
+                                        <i class="fas fa-location-dot"></i>
+                                    </div>
+                                    <div class="activity-text-content">
+                                        <div class="activity-title-line">
+                                            <span class="activity-time-stamp">04:20:28 AM</span>
+                                            <span class="activity-event-name">Location Update</span>
+                                        </div>
+                                        <div class="activity-description">Location received from TEST001_Samsung
+                                            Test_74285b00</div>
+                                    </div>
+                                </div>
+
+                                <div class="activity-item-row">
+                                    <div class="activity-icon-bullet activity-icon-geofence">
+                                        <i class="fas fa-shield-check"></i>
+                                    </div>
+                                    <div class="activity-text-content">
+                                        <div class="activity-title-line">
+                                            <span class="activity-time-stamp">04:18:15 AM</span>
+                                            <span class="activity-event-name">Geofence Check</span>
+                                        </div>
+                                        <div class="activity-description">Device is within allowed area</div>
+                                    </div>
+                                </div>
+
+                                <div class="activity-item-row">
+                                    <div class="activity-icon-bullet activity-icon-device">
+                                        <i class="fas fa-plug"></i>
+                                    </div>
+                                    <div class="activity-text-content">
+                                        <div class="activity-title-line">
+                                            <span class="activity-time-stamp">04:15:02 AM</span>
+                                            <span class="activity-event-name">Device Online</span>
+                                        </div>
+                                        <div class="activity-description">TEST001 connected via WebSocket</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Alerts Card -->
+                        <div class="saas-card">
+                            <div class="saas-card-header">
+                                <div class="saas-card-title">
+                                    <i class="fas fa-bell"></i>
+                                    <span>Alerts</span>
+                                    <span class="menu-badge" style="margin-left: 6px;">4</span>
+                                </div>
+                                <a href="javascript:void(0)" class="card-link-action" onclick="switchView('alerts')">
+                                    <span>View All</span>
+                                    <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </div>
+
+                            <div class="compact-alerts-list" id="overviewAlertsList">
+                                <div class="alert-item-row"
+                                    onclick="openAlertDrawer('Battery Low', 'Critical battery level 0%')">
+                                    <div class="alert-icon-bullet"
+                                        style="background: var(--accent-danger-subtle); color: var(--accent-danger);">
+                                        <i class="fas fa-battery-empty"></i>
+                                    </div>
+                                    <div class="alert-item-time">04:10:12 AM</div>
+                                    <div class="alert-item-details">
+                                        <div class="alert-item-title">Battery Low</div>
+                                        <div class="alert-item-sub">TEST001_Samsung Test_74285b00 battery at 0%</div>
+                                    </div>
+                                    <div class="severity-pill severity-high">High</div>
+                                </div>
+
+                                <div class="alert-item-row"
+                                    onclick="openAlertDrawer('Geofence Breach', 'Device exited Safe Zone - Office')">
+                                    <div class="alert-icon-bullet"
+                                        style="background: var(--accent-warning-subtle); color: var(--accent-warning);">
+                                        <i class="fas fa-triangle-exclamation"></i>
+                                    </div>
+                                    <div class="alert-item-time">03:45:33 AM</div>
+                                    <div class="alert-item-details">
+                                        <div class="alert-item-title">Geofence Breach</div>
+                                        <div class="alert-item-sub">Device exited Safe Zone - Office</div>
+                                    </div>
+                                    <div class="severity-pill severity-medium">Medium</div>
+                                </div>
+
+                                <div class="alert-item-row"
+                                    onclick="openAlertDrawer('Inactivity Alert', 'No movement detected for 30 minutes')">
+                                    <div class="alert-icon-bullet"
+                                        style="background: var(--accent-info-subtle); color: var(--accent-info);">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                    <div class="alert-item-time">02:12:45 AM</div>
+                                    <div class="alert-item-details">
+                                        <div class="alert-item-title">Inactivity Alert</div>
+                                        <div class="alert-item-sub">No movement detected for 30 minutes</div>
+                                    </div>
+                                    <div class="severity-pill severity-low">Low</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hidden Canvas for Activity Chart (keeps chart initialized in background) -->
+                    <div style="display:none;">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                </section>
+
+                <!-- ============================================================
+                     🗺️ 2. LIVE TRACKING WORKSPACE (#view-map)
+                     ============================================================ -->
+                <section class="view-container" id="view-map">
+                    <div class="page-header-row">
+                        <div>
+                            <h2 class="page-title">Live Tracking Workspace</h2>
+                            <p class="page-subtitle">Real-time GPS fleet positioning, historical route playback, and
+                                breadcrumb trails</p>
+                        </div>
+                        <div class="header-action-cluster">
+                            <button class="btn-saas btn-saas-secondary" onclick="startPlayback()"><i
+                                    class="fas fa-play"></i> Playback</button>
+                            <button class="btn-saas btn-saas-primary" onclick="requestLiveLocation()"><i
+                                    class="fas fa-satellite"></i> Ping Device</button>
+                        </div>
+                    </div>
+
+                    <div class="saas-card" style="height: 640px; position: relative;">
+                        <div class="saas-card-header">
+                            <div class="saas-card-title">
+                                <i class="fas fa-map-location-dot"></i>
+                                <span>Fleet Operations Map</span>
+                            </div>
+                            <div class="saas-card-actions">
+                                <span class="status-badge-live">
+                                    <div class="live-dot"></div> Live Telemetry
+                                </span>
+                            </div>
+                        </div>
+                        <div style="flex: 1; position: relative;" id="workspaceMapContainer">
+                            <!-- Workspace can clone map view or interact -->
+                            <div style="padding: 24px; text-align: center; color: var(--text-muted);">
+                                <i class="fas fa-satellite-dish"
+                                    style="font-size: 32px; margin-bottom: 12px; color: var(--accent-primary);"></i>
+                                <p style="font-size: 14px; font-weight: 500; color: var(--text-primary);">Tracking map
+                                    active on Primary Command Screen</p>
+                                <p style="font-size: 12px; margin-top: 4px;">Switch back to Operational Overview for
+                                    synchronized real-time multi-device display.</p>
+                                <button class="btn-saas btn-saas-accent" style="margin-top: 16px;"
+                                    onclick="switchView('dashboard')">
+                                    <i class="fas fa-arrow-left"></i> Return to Operational Overview
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ============================================================
+                     📱 3. DEVICES MANAGEMENT TABLE (#view-devices)
+                     ============================================================ -->
+                <section class="view-container" id="view-devices">
+                    <div class="page-header-row">
+                        <div>
+                            <h2 class="page-title">Device Management</h2>
+                            <p class="page-subtitle">Connected hardware inventory, telemetry health, battery levels, and
+                                firmware status</p>
+                        </div>
+                        <div class="header-action-cluster">
+                            <button class="btn-saas btn-saas-secondary" onclick="fetchConnectedDevices()"><i
+                                    class="fas fa-sync-alt"></i> Refresh</button>
+                            <button class="btn-saas btn-saas-primary" onclick="exportCSV()"><i
+                                    class="fas fa-download"></i> Export Inventory</button>
+                        </div>
+                    </div>
+
+                    <div class="saas-card">
+                        <div class="filter-toolbar">
+                            <div class="filter-group">
+                                <input type="text" class="form-input" id="deviceTableSearch"
+                                    placeholder="Filter by device ID..." style="height: 30px; width: 220px;"
+                                    oninput="filterDeviceTable()" />
+                                <div class="filter-chip active" onclick="filterDeviceTableStatus('ALL')">All Devices
+                                </div>
+                                <div class="filter-chip" onclick="filterDeviceTableStatus('ONLINE')">Online Only</div>
+                                <div class="filter-chip" onclick="filterDeviceTableStatus('OFFLINE')">Offline Only</div>
+                            </div>
+                        </div>
+
+                        <div class="saas-table-container">
+                            <table class="saas-table" id="devicesDataTable">
+                                <thead>
+                                    <tr>
+                                        <th>Device ID</th>
+                                        <th>Status</th>
+                                        <th>Battery</th>
+                                        <th>Speed</th>
+                                        <th>Accuracy</th>
+                                        <th>Last Seen</th>
+                                        <th>Tracking State</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="devicesTableBody">
+                                    <tr onclick="openDeviceDrawer('TEST001_Samsung Test_74285b00')">
+                                        <td>
+                                            <div style="font-weight: 600; font-family: 'JetBrains Mono', monospace;">
+                                                TEST001_Samsung Test_74285b00</div>
+                                            <div style="font-size: 10px; color: var(--text-muted);">Samsung | Android 14
+                                            </div>
+                                        </td>
+                                        <td><span class="badge-status-online"><i class="fas fa-circle"
+                                                    style="font-size: 6px;"></i> Online</span></td>
+                                        <td>0%</td>
+                                        <td>0.2 m/s</td>
+                                        <td>42.5 m</td>
+                                        <td>04:20:28 AM</td>
+                                        <td><span class="severity-pill severity-low">IDLE</span></td>
+                                        <td>
+                                            <button class="btn-saas btn-saas-secondary"
+                                                style="height: 26px; padding: 0 8px; font-size: 11px;"
+                                                onclick="event.stopPropagation(); openDeviceDrawer('TEST001_Samsung Test_74285b00')">
+                                                <i class="fas fa-eye"></i> Details
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ============================================================
+                     ⚡ 4. COMMAND CENTER WORKSPACE (#view-commands)
+                     ============================================================ -->
+                <section class="view-container" id="view-commands">
+                    <div class="page-header-row">
+                        <div>
+                            <h2 class="page-title">Remote Command Center</h2>
+                            <p class="page-subtitle">Execute mission-critical remote actions with dual confirmation and
+                                2-way secure comms</p>
+                        </div>
+                    </div>
+
+                    <div class="command-center-grid">
+                        <!-- Remote Actions Box -->
+                        <div class="saas-card">
+                            <div class="saas-card-header">
+                                <div class="saas-card-title">
+                                    <i class="fas fa-bolt"></i>
+                                    <span>Remote Hardware Actions</span>
+                                </div>
+                            </div>
+                            <div style="padding: 16px;" class="command-actions-box">
+                                <!-- Trigger Siren (Dangerous) -->
+                                <div class="command-card-button danger"
+                                    onclick="requestCommandConfirm('START_SIREN', 'Trigger Siren', 'Activate device alarm siren at maximum volume')">
+                                    <div class="command-btn-info danger">
+                                        <i class="fas fa-bullhorn"></i>
+                                        <div>
+                                            <div class="command-btn-title">Trigger Audible Siren</div>
+                                            <div class="command-btn-desc">High-priority sound alarm for emergencies
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button class="btn-saas btn-saas-danger"
+                                        style="height: 28px; font-size: 11px;">Execute</button>
+                                </div>
+
+                                <!-- Force Location -->
+                                <div class="command-card-button primary"
+                                    onclick="requestCommandConfirm('GET_LOCATION', 'Force Location Update', 'Request immediate high-precision GPS lock')">
+                                    <div class="command-btn-info">
+                                        <i class="fas fa-crosshairs" style="color: var(--accent-primary);"></i>
+                                        <div>
+                                            <div class="command-btn-title">Force Location Ping</div>
+                                            <div class="command-btn-desc">Request immediate GPS fix from device</div>
+                                        </div>
+                                    </div>
+                                    <button class="btn-saas btn-saas-secondary"
+                                        style="height: 28px; font-size: 11px;">Execute</button>
+                                </div>
+
+                                <!-- Wipe Cache (Dangerous) -->
+                                <div class="command-card-button danger"
+                                    onclick="requestCommandConfirm('WIPE_CACHE', 'Wipe Device Cache', 'Purge offline stored telemetry buffer from device storage')">
+                                    <div class="command-btn-info danger">
+                                        <i class="fas fa-trash-alt"></i>
+                                        <div>
+                                            <div class="command-btn-title">Wipe Local Cache</div>
+                                            <div class="command-btn-desc">Clear internal offline logs on hardware</div>
+                                        </div>
+                                    </div>
+                                    <button class="btn-saas btn-saas-danger"
+                                        style="height: 28px; font-size: 11px;">Execute</button>
+                                </div>
+
+                                <!-- Restart Service (Dangerous) -->
+                                <div class="command-card-button danger"
+                                    onclick="requestCommandConfirm('RESTART_SERVICE', 'Restart Background Service', 'Recycle background tracking daemon on target device')">
+                                    <div class="command-btn-info danger">
+                                        <i class="fas fa-power-off"></i>
+                                        <div>
+                                            <div class="command-btn-title">Restart Tracking Daemon</div>
+                                            <div class="command-btn-desc">Recycle background location foreground service
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button class="btn-saas btn-saas-danger"
+                                        style="height: 28px; font-size: 11px;">Execute</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2-Way Secure Comm Channel -->
+                        <div class="saas-card">
+                            <div class="saas-card-header">
+                                <div class="saas-card-title">
+                                    <i class="fas fa-shield-halved"></i>
+                                    <span>Secure Communication Channel</span>
+                                </div>
+                            </div>
+                            <div style="padding: 16px;">
+                                <div class="chat-window">
+                                    <div class="chat-messages-scroll" id="chatMessages">
+                                        <div class="chat-bubble received">
+                                            <div>Device connected. Encrypted channel established.</div>
+                                            <div class="chat-bubble-meta">System • Now</div>
+                                        </div>
+                                    </div>
+                                    <div class="chat-input-bar">
+                                        <input type="text" id="chatInput"
+                                            placeholder="Send operational instructions to field device..."
+                                            onkeydown="if(event.key==='Enter') sendMessage();" />
+                                        <button class="btn-saas btn-saas-accent" onclick="sendMessage()">
+                                            <i class="fas fa-paper-plane"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ============================================================
+                     🔔 5. ALERTS MANAGEMENT WORKSPACE (#view-alerts)
+                     ============================================================ -->
+                <section class="view-container" id="view-alerts">
+                    <div class="page-header-row">
+                        <div>
+                            <h2 class="page-title">Alert Management & Liveness</h2>
+                            <p class="page-subtitle" id="alertsScopeSubtitle">Security anomalies, anti-spoofing
+                                verification, and threshold breaches</p>
+                        </div>
+                        <div class="header-action-cluster">
+                            <button class="btn-saas btn-saas-secondary" id="refreshAlerts"
+                                onclick="loadAlerts(); loadSecurityAlerts();">
+                                <i class="fas fa-sync-alt"></i> Refresh Feeds
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Liveness Stats Row -->
+                    <div class="kpi-grid" style="margin-bottom: 24px;">
+                        <div class="kpi-card">
+                            <div class="kpi-card-top">
+                                <div class="kpi-icon-wrap kpi-icon-emerald"><i class="fas fa-shield-check"></i></div>
+                                <div class="kpi-card-title">Live Verified</div>
+                            </div>
+                            <div class="kpi-value text-online font-mono" id="statLive">0</div>
+                            <div class="kpi-subtext"><span class="status-dot status-dot-online"></span> Passed
+                                Anti-Spoofing</div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div class="kpi-card-top">
+                                <div class="kpi-icon-wrap kpi-icon-crimson"><i class="fas fa-triangle-exclamation"></i>
+                                </div>
+                                <div class="kpi-card-title">Verification Failed</div>
+                            </div>
+                            <div class="kpi-value text-critical font-mono" id="statFailed">0</div>
+                            <div class="kpi-subtext"><span class="status-dot status-dot-critical"></span> Face / Bio
+                                Mismatch</div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div class="kpi-card-top">
+                                <div class="kpi-icon-wrap"
+                                    style="background-color: rgba(245, 158, 11, 0.12); color: var(--color-warning);"><i
+                                        class="fas fa-location-crosshairs"></i></div>
+                                <div class="kpi-card-title">GPS Spoofing</div>
+                            </div>
+                            <div class="kpi-value text-warning font-mono" id="statSpoof">0</div>
+                            <div class="kpi-subtext"><span class="status-dot status-dot-warning"></span> Mock Location
+                                Flags</div>
+                        </div>
+
+                        <div class="kpi-card">
+                            <div class="kpi-card-top">
+                                <div class="kpi-icon-wrap kpi-icon-blue"><i class="fas fa-user-shield"></i></div>
+                                <div class="kpi-card-title">Manual Overrides</div>
+                            </div>
+                            <div class="kpi-value text-info font-mono" id="statOverride">0</div>
+                            <div class="kpi-subtext"><span class="status-dot status-dot-info"></span> Operator
+                                Overridden</div>
+                        </div>
+
+                        <!-- Average speed holder -->
+                        <div style="display:none;" id="statAvgSpeed">--</div>
+                    </div>
+
+                    <div class="overview-secondary-split">
+                        <!-- Recent Alerts History Card -->
+                        <div class="saas-card">
+                            <div class="saas-card-header">
+                                <div class="saas-card-title">
+                                    <i class="fas fa-triangle-exclamation" style="color: var(--color-warning);"></i>
+                                    <span>Recent Alerts History</span>
+                                    <span class="status-badge badge-warning" id="recentAlertsBadge"
+                                        style="margin-left: 6px;">0 Active</span>
+                                </div>
+                                <div class="saas-card-actions">
+                                    <a href="javascript:void(0)" class="card-link-action" onclick="loadAlerts()">
+                                        <span>Reload</span>
+                                        <i class="fas fa-sync-alt"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div id="alertsHistory" class="compact-alerts-list" style="min-height: 260px;"></div>
+                        </div>
+
+                        <!-- Security Alerts Card -->
+                        <div class="saas-card">
+                            <div class="saas-card-header">
+                                <div class="saas-card-title">
+                                    <i class="fas fa-shield-alt" style="color: var(--color-critical);"></i>
+                                    <span>Security Alerts & Violations</span>
+                                    <span class="status-badge badge-critical" id="securityAlertsBadge"
+                                        style="margin-left: 6px;">0 Active</span>
+                                </div>
+                                <div class="saas-card-actions">
+                                    <a href="javascript:void(0)" class="card-link-action"
+                                        onclick="loadSecurityAlerts()">
+                                        <span>Reload</span>
+                                        <i class="fas fa-sync-alt"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div id="securityAlerts" class="compact-alerts-list" style="min-height: 260px;"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ============================================================
+                     📊 6. ANALYTICS WORKSPACE (#view-analytics)
+                     ============================================================ -->
+                <section class="view-container" id="view-analytics">
+                    <div class="page-header-row">
+                        <div>
+                            <h2 class="page-title">Fleet Analytics & Intelligence</h2>
+                            <p class="page-subtitle">Historical movement telemetry, battery drain, and anomaly detection
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="saas-card">
+                        <div class="filter-toolbar">
+                            <div class="filter-group">
+                                <button class="filter-chip tab active" data-tab="summary">Summary</button>
+                                <button class="filter-chip tab" data-tab="battery">Battery</button>
+                                <button class="filter-chip tab" data-tab="distance">Distance</button>
+                                <button class="filter-chip tab" data-tab="states">States</button>
+                            </div>
+                        </div>
+
+                        <div style="padding: 20px;">
+                            <div class="tab-content active" id="tab-summary">
+                                <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                                    <button class="btn-saas btn-saas-primary" id="loadSummary"><i
+                                            class="fas fa-route"></i> Load Summary</button>
+                                    <button class="btn-saas btn-saas-secondary" id="loadAnomalies"><i
+                                            class="fas fa-exclamation-triangle"></i> Anomalies</button>
+                                </div>
+                                <div class="info-pill" id="summaryBox"
+                                    style="margin-bottom: 12px; display: block; border-radius: var(--radius-sm);">Click
+                                    "Load Summary" to compute telemetry metrics...</div>
+                                <div class="info-pill" id="anomaliesBox"
+                                    style="display: block; border-radius: var(--radius-sm);">Click "Anomalies" to scan
+                                    for anomalies...</div>
+                            </div>
+
+                            <div class="tab-content" id="tab-battery" style="display:none;">
+                                <button class="btn-saas btn-saas-primary" id="loadBattery"
+                                    style="margin-bottom: 16px;"><i class="fas fa-battery-three-quarters"></i> Load
+                                    Battery Stats</button>
+                                <div class="info-pill" id="batteryBox" style="display: block;">Loading battery
+                                    metrics...</div>
+                            </div>
+
+                            <div class="tab-content" id="tab-distance" style="display:none;">
+                                <button class="btn-saas btn-saas-primary" id="loadDistance"
+                                    style="margin-bottom: 16px;"><i class="fas fa-route"></i> Load Distance
+                                    Stats</button>
+                                <div class="info-pill" id="distanceBox" style="display: block;">Loading distance
+                                    metrics...</div>
+                            </div>
+
+                            <div class="tab-content" id="tab-states" style="display:none;">
+                                <button class="btn-saas btn-saas-primary" id="loadStates"
+                                    style="margin-bottom: 16px;"><i class="fas fa-chart-pie"></i> Load State
+                                    Distribution</button>
+                                <div class="info-pill" id="statesBox" style="display: block;">Loading state metrics...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ============================================================
+                     🚨 7. INCIDENTS WORKSPACE (#view-incidents)
+                     ============================================================ -->
+                <section class="view-container" id="view-incidents">
+                    <div class="page-header-row">
+                        <div>
+                            <h2 class="page-title">Incident Reports</h2>
+                            <p class="page-subtitle">Field incident tracking, photographic evidence, and resolution
+                                workflow</p>
+                        </div>
+                        <div class="header-action-cluster">
+                            <button class="btn-saas btn-saas-primary" id="loadIncidents"><i class="fas fa-sync-alt"></i>
+                                Refresh Incidents</button>
+                        </div>
+                    </div>
+
+                    <div class="saas-card">
+                        <div style="padding: 16px;" id="incidentsBox"></div>
+                    </div>
+                </section>
+
+                <!-- ============================================================
+                     📣 8. ANNOUNCEMENTS WORKSPACE (#view-announcements)
+                     ============================================================ -->
+                <section class="view-container" id="view-announcements">
+                    <div class="page-header-row">
+                        <div>
+                            <h2 class="page-title">Announcements Center</h2>
+                            <p class="page-subtitle">Broadcast priority voice & text messages to field hardware with
+                                delivery acknowledgments</p>
+                        </div>
+                        <div class="header-action-cluster">
+                            <button class="btn-saas btn-saas-primary" id="btnOpenAnnouncementMain"><i
+                                    class="fas fa-plus"></i> New Announcement</button>
+                            <button class="btn-saas btn-saas-secondary" id="refreshAnnouncements"><i
+                                    class="fas fa-rotate"></i> Refresh</button>
+                        </div>
+                    </div>
+
+                    <div class="saas-card">
+                        <div class="saas-card-header">
+                            <div class="saas-card-title"><i class="fas fa-list"></i> <span>Recent Announcements (Last
+                                    24h)</span></div>
+                        </div>
+                        <div style="padding: 16px;" id="announcementsList"></div>
+                    </div>
+                </section>
+
+                <!-- ============================================================
+                     🗺️ 9. GEOFENCES WORKSPACE (#view-geofences)
+                     ============================================================ -->
+                <section class="view-container" id="view-geofences">
+                    <div class="page-header-row">
+                        <div>
+                            <h2 class="page-title">Geofence Management</h2>
+                            <p class="page-subtitle">Virtual boundary zones, entry/exit alert triggers, and site
+                                security policies</p>
+                        </div>
+                        <div class="header-action-cluster">
+                            <button class="btn-saas btn-saas-primary" id="manageGeofences"><i
+                                    class="fas fa-layer-group"></i> Manage Zones</button>
+                        </div>
+                    </div>
+
+                    <div class="overview-secondary-split">
+                        <div class="saas-card">
+                            <div class="saas-card-header">
+                                <div class="saas-card-title"><i class="fas fa-history"></i> <span>Zone Activity
+                                        Log</span></div>
+                            </div>
+                            <div style="padding: 16px;" id="geofenceEvents"></div>
+                        </div>
+
+                        <div class="saas-card">
+                            <div class="saas-card-header">
+                                <div class="saas-card-title"><i class="fas fa-map-pin"></i> <span>Active
+                                        Geofences</span></div>
+                            </div>
+                            <div style="padding: 16px;" id="geofenceList"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ============================================================
+                     📷 10. PHOTO GALLERY (#view-photos)
+                     ============================================================ -->
+                <section class="view-container" id="view-photos">
+                    <div class="page-header-row">
+                        <div>
+                            <h2 class="page-title">Photo Evidence Gallery</h2>
+                            <p class="page-subtitle">Images captured by device cameras, security checkpoints, and
+                                incident reports</p>
+                        </div>
+                        <div class="header-action-cluster">
+                            <select id="photoLimit" class="saas-select-pill">
+                                <option value="5">5 photos</option>
+                                <option value="10" selected>10 photos</option>
+                                <option value="20">20 photos</option>
+                                <option value="50">50 photos</option>
+                            </select>
+                            <button class="btn-saas btn-saas-secondary" id="refreshPhotos"><i
+                                    class="fas fa-sync-alt"></i> Refresh</button>
+                            <a id="downloadPhoto" href="#" download>
+                                <button class="btn-saas btn-saas-primary"><i class="fas fa-download"></i>
+                                    Download</button>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="saas-card" style="padding: 20px;">
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
+                            <img id="photoMain" alt="No photos available"
+                                style="max-height: 440px; border-radius: var(--radius-md); border: 1px solid var(--border-color); object-fit: contain; max-width: 100%;" />
+                            <div id="thumbStrip"
+                                style="display: flex; gap: 10px; overflow-x: auto; max-width: 100%; padding: 10px 0;">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ============================================================
+                     📍 11. CHECKPOINTS (#view-checkpoints)
+                     ============================================================ -->
+                <section class="view-container" id="view-checkpoints">
+                    <div class="page-header-row">
+                        <div>
+                            <h2 class="page-title">Checkpoint Visits</h2>
+                            <p class="page-subtitle">Security guard tour inspections, NFC/QR scan verifications, and
+                                timestamps</p>
+                        </div>
+                        <div class="header-action-cluster">
+                            <button class="btn-saas btn-saas-primary" id="loadCheckpoints"><i
+                                    class="fas fa-sync-alt"></i> Refresh Checkpoints</button>
+                        </div>
+                    </div>
+
+                    <div class="saas-card">
+                        <div style="padding: 16px;" id="checkpointsBox"></div>
+                    </div>
+                </section>
+
+                <!-- ============================================================
+                     🐞 12. BUG REPORTS (#view-bugs)
+                     ============================================================ -->
+                <section class="view-container" id="view-bugs">
+                    <div class="page-header-row">
+                        <div>
+                            <h2 class="page-title">Bug & Crash Diagnostics</h2>
+                            <p class="page-subtitle">Application exceptions, native stacktraces, and client diagnostic
+                                logs</p>
+                        </div>
+                        <div class="header-action-cluster">
+                            <button class="btn-saas btn-saas-primary" id="refreshBugs"><i class="fas fa-sync-alt"></i>
+                                Refresh</button>
+                        </div>
+                    </div>
+
+                    <div class="kpi-grid" style="margin-bottom: 16px;">
+                        <div class="kpi-card">
+                            <div class="kpi-card-title">Critical</div>
+                            <div class="kpi-value" id="statBugCritical" style="color: var(--accent-danger);">0</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-card-title">High</div>
+                            <div class="kpi-value" id="statBugHigh" style="color: var(--accent-warning);">0</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-card-title">Medium</div>
+                            <div class="kpi-value" id="statBugMedium" style="color: var(--accent-info);">0</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-card-title">Low</div>
+                            <div class="kpi-value" id="statBugLow" style="color: var(--accent-success);">0</div>
+                        </div>
+                    </div>
+
+                    <div class="saas-card">
+                        <div style="padding: 16px;" id="bugList"></div>
+                    </div>
+                </section>
+
+                <!-- ============================================================
+                     📄 13. REPORTS & EXPORTS WORKSPACE (#view-reports)
+                     ============================================================ -->
+                <section class="view-container" id="view-reports">
+                    <div class="page-header-row">
+                        <div>
+                            <h2 class="page-title">Operational Reports & Data Exports</h2>
+                            <p class="page-subtitle">Generate regulatory audit logs, device health summaries, and CSV
+                                telemetry exports</p>
+                        </div>
+                    </div>
+
+                    <div class="kpi-grid">
+                        <div class="saas-card" style="padding: 20px;">
+                            <div class="saas-card-title" style="margin-bottom: 8px;"><i class="fas fa-file-excel"></i>
+                                Daily Activity Report</div>
+                            <p style="color: var(--text-secondary); font-size: 12px; margin-bottom: 16px;">Detailed
+                                summary of device uptime, battery cycles, and total distance traveled in the last 24h.
+                            </p>
+                            <button class="btn-saas btn-saas-primary" onclick="exportCSV()"><i
+                                    class="fas fa-download"></i> Export CSV</button>
+                        </div>
+
+                        <div class="saas-card" style="padding: 20px;">
+                            <div class="saas-card-title" style="margin-bottom: 8px;"><i class="fas fa-heart-pulse"></i>
+                                Device Health Report</div>
+                            <p style="color: var(--text-secondary); font-size: 12px; margin-bottom: 16px;">Comprehensive
+                                hardware diagnostics, crash frequency, and network latency logs.</p>
+                            <button class="btn-saas btn-saas-secondary" onclick="exportCSV()"><i
+                                    class="fas fa-download"></i> Export CSV</button>
+                        </div>
+
+                        <div class="saas-card" style="padding: 20px;">
+                            <div class="saas-card-title" style="margin-bottom: 8px;"><i
+                                    class="fas fa-triangle-exclamation"></i> Incident Incident Audit</div>
+                            <p style="color: var(--text-secondary); font-size: 12px; margin-bottom: 16px;">Formal record
+                                of all security breaches, geofence violations, and incident resolutions.</p>
+                            <button class="btn-saas btn-saas-secondary" onclick="exportCSV()"><i
+                                    class="fas fa-download"></i> Export CSV</button>
+                        </div>
+
+                        <div class="saas-card" style="padding: 20px;">
+                            <div class="saas-card-title" style="margin-bottom: 8px;"><i class="fas fa-route"></i> Raw
+                                Telemetry Log</div>
+                            <p style="color: var(--text-secondary); font-size: 12px; margin-bottom: 16px;">Complete GPS
+                                coordinate points, speed, bearing, and altitude timestamp records.</p>
+                            <button class="btn-saas btn-saas-primary" id="exportDataBtn" onclick="exportCSV()"><i
+                                    class="fas fa-download"></i> Export Full CSV</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ============================================================
+                     ℹ️ 14. HELP & DIAGNOSTICS WORKSPACE (#view-help)
+                     ============================================================ -->
+                <section class="view-container" id="view-help">
+                    <div class="page-header-row">
+                        <div>
+                            <h2 class="page-title">Help & System Diagnostics</h2>
+                            <p class="page-subtitle">Architecture status, WebSocket protocol endpoints, and operational
+                                support</p>
+                        </div>
+                    </div>
+
+                    <div class="saas-card" style="padding: 24px;">
+                        <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">
+                            Watchmen Elite Fleet Architecture</h3>
+                        <p
+                            style="color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; margin-bottom: 20px;">
+                            The Watchmen Elite Command Center establishes an encrypted, low-latency WebSocket connection
+                            directly with field Android devices and edge telemetry nodes. Telemetry streams at
+                            sub-second intervals and coordinates are projected onto an accelerated vector map.
+                        </p>
+
+                        <div class="kpi-grid">
+                            <div class="telemetry-tile">
+                                <div class="telemetry-tile-data">
+                                    <span class="telemetry-tile-label">Backend Host</span>
+                                    <span class="telemetry-tile-value">127.0.0.1:8000</span>
+                                </div>
+                            </div>
+                            <div class="telemetry-tile">
+                                <div class="telemetry-tile-data">
+                                    <span class="telemetry-tile-label">WebSocket Protocol</span>
+                                    <span class="telemetry-tile-value">ws://127.0.0.1:8000/ws</span>
+                                </div>
+                            </div>
+                            <div class="telemetry-tile">
+                                <div class="telemetry-tile-data">
+                                    <span class="telemetry-tile-label">Platform Version</span>
+                                    <span class="telemetry-tile-value">v4.2-Enterprise</span>
+                                </div>
+                            </div>
+                            <div class="telemetry-tile">
+                                <div class="telemetry-tile-data">
+                                    <span class="telemetry-tile-label">Security Protocol</span>
+                                    <span class="telemetry-tile-value">TLS / Signed Tokens</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
         </div>
-
     </div>
 
     <!-- ============================================================
-         🎭 MODALS
+         🎭 SLIDE-OVER DETAIL DRAWER (FOR DEVICES & ALERTS)
          ============================================================ -->
-    <!-- Geofence Management Modal -->
-    <div id="geofenceModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <span class="modal-title">Manage Geofences</span>
-                <button class="modal-close" onclick="closeGeofenceModal()">×</button>
-            </div>
-            <div id="geofenceListModal" class="list-container"></div>
+    <div class="detail-drawer-backdrop" id="detailDrawerBackdrop" onclick="closeDetailDrawer()"></div>
+    <aside class="detail-drawer" id="detailDrawer">
+        <div class="drawer-header">
+            <h3 id="drawerTitle">Device Details</h3>
+            <button class="modal-close-btn" onclick="closeDetailDrawer()"><i class="fas fa-times"></i></button>
         </div>
-    </div>
-
-
-    <!-- Geofence Creation Modal -->
-    <div id="createGeofenceModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <span class="modal-title">Create Geofence</span>
-                <button class="modal-close" onclick="closeCreateModal()">×</button>
-            </div>
-            <div class="form-group">
-                <label>Zone Name</label>
-                <input type="text" id="geofenceName" placeholder="e.g., Construction Site A">
-            </div>
-            <div class="form-group">
-                <label>Radius (meters)</label>
-                <input type="number" id="geofenceRadius" value="100" min="10" max="5000">
-            </div>
-            <div class="form-group">
-                <label>Color</label>
-                <input type="text" id="geofenceColor" value="#00f5ff">
-            </div>
-            <button class="btn btn-primary" onclick="saveGeofence()" style="width: 100%;">
-                <i class="fas fa-save"></i> Create Geofence
-            </button>
-        </div>
-    </div>
-    <!-- Settings Modal -->
-    <div id="settingsModal" class="modal">
-        <div class="modal-content card" style="max-width: 500px;">
-            <div class="card-header">
-                <div class="card-title">
-                    <i class="fas fa-cog"></i> System Settings
+        <div class="drawer-body" id="drawerBody">
+            <!-- Dynamic Content populated by JS -->
+            <div id="drawerDeviceIdentity" class="device-hero-banner">
+                <div class="device-hero-icon"><i class="fas fa-mobile-alt"></i></div>
+                <div class="device-hero-meta">
+                    <div class="device-hero-id" id="drawerDeviceId">TEST001_Samsung Test_74285b00</div>
+                    <div class="device-hero-model">Status: <span class="badge-status-online">Online</span></div>
                 </div>
-                <button class="modal-close" onclick="closeSettingsModal()">×</button>
+            </div>
+
+            <div>
+                <h4
+                    style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 8px;">
+                    Telemetry Parameters</h4>
+                <div class="telemetry-compact-grid" id="drawerTelemetryGrid">
+                    <div class="telemetry-tile">
+                        <div class="telemetry-tile-data">
+                            <span class="telemetry-tile-label">Speed</span>
+                            <span class="telemetry-tile-value" id="drawerSpeed">0.2 m/s</span>
+                        </div>
+                    </div>
+                    <div class="telemetry-tile">
+                        <div class="telemetry-tile-data">
+                            <span class="telemetry-tile-label">Battery</span>
+                            <span class="telemetry-tile-value" id="drawerBattery">0%</span>
+                        </div>
+                    </div>
+                    <div class="telemetry-tile">
+                        <div class="telemetry-tile-data">
+                            <span class="telemetry-tile-label">GPS Accuracy</span>
+                            <span class="telemetry-tile-value" id="drawerAccuracy">42.5 m</span>
+                        </div>
+                    </div>
+                    <div class="telemetry-tile">
+                        <div class="telemetry-tile-data">
+                            <span class="telemetry-tile-label">Bearing</span>
+                            <span class="telemetry-tile-value" id="drawerBearing">94°</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h4
+                    style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 8px;">
+                    Quick Operational Actions</h4>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button class="btn-saas btn-saas-secondary"
+                        onclick="requestCommandConfirm('GET_LOCATION', 'Ping Device', 'Force instant GPS update')"><i
+                            class="fas fa-crosshairs"></i> Ping Instant Location</button>
+                    <button class="btn-saas btn-saas-danger"
+                        onclick="requestCommandConfirm('START_SIREN', 'Trigger Siren', 'Activate siren immediately')"><i
+                            class="fas fa-bullhorn"></i> Sound Alarm Siren</button>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ============================================================
+         🛡️ SAFETY CONFIRMATION MODAL
+         ============================================================ -->
+    <div id="commandConfirmModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="confirmModalTitle">
+                    <i class="fas fa-triangle-exclamation" style="color: var(--accent-danger);"></i>
+                    <span>Confirm Critical Remote Action</span>
+                </div>
+                <button class="modal-close-btn" onclick="closeCommandConfirm()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmModalDesc" style="font-size: 13px; color: var(--text-primary); line-height: 1.5;"></p>
+                <div class="info-pill"
+                    style="font-size: 11.5px; font-family: 'JetBrains Mono', monospace; background-color: var(--bg-elevated); margin-top: 4px;">
+                    Target Device: <strong id="confirmModalTarget"
+                        style="color: var(--accent-primary); margin-left: 6px;"></strong>
+                </div>
+                <div id="confirmCommandProgress"
+                    style="display:none; font-size: 12px; color: var(--accent-info); margin-top: 8px;">
+                    <i class="fas fa-spinner fa-spin"></i> <span id="confirmCommandProgressText">Sending
+                        command...</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-saas btn-saas-secondary" id="btnConfirmCancel"
+                    onclick="closeCommandConfirm()">Cancel</button>
+                <button class="btn-saas btn-saas-danger" id="btnConfirmProceed"
+                    onclick="executeConfirmedCommand()">Confirm & Execute</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         ⚙️ SETTINGS MODAL
+         ============================================================ -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-cog"></i> <span>System Settings</span></div>
+                <button class="modal-close-btn" onclick="closeSettingsModal()"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
                     <label>Dashboard Refresh Rate (sec)</label>
-                    <input type="number" id="settingRefresh" value="30" min="5" max="300">
+                    <input type="number" id="settingRefresh" class="form-input" value="30" min="5" max="300">
                 </div>
                 <div class="form-group">
                     <label>Map Auto-Follow</label>
-                    <select id="settingFollow">
+                    <select id="settingFollow" class="form-select">
                         <option value="true">Enabled</option>
                         <option value="false">Disabled</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Theme</label>
-                    <select id="settingTheme">
-                        <option value="elite-dark">Elite Dark (Default)</option>
-                        <option value="midnight">Midnight</option>
+                    <label>Theme Style</label>
+                    <select id="settingTheme" class="form-select">
+                        <option value="elite-dark">Elite Dark (TesterArmy Inspired)</option>
+                        <option value="midnight">Midnight Slate</option>
                         <option value="high-contrast">High Contrast</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label><input type="checkbox" id="settingNotifs" checked> Desktop Notifications</label>
+                <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="settingNotifs" checked>
+                    <label for="settingNotifs" style="margin-bottom: 0;">Enable Desktop OS Notifications</label>
                 </div>
             </div>
-            <div class="modal-footer" style="display:flex; justify-content:flex-end; margin-top:1.5rem;">
-                <button class="btn btn-primary" onclick="saveSettings()">
-                    <i class="fas fa-save"></i> Save Settings
-                </button>
+            <div class="modal-footer">
+                <button class="btn-saas btn-saas-secondary" onclick="closeSettingsModal()">Cancel</button>
+                <button class="btn-saas btn-saas-primary" onclick="saveSettings()"><i class="fas fa-save"></i> Save
+                    Settings</button>
             </div>
         </div>
     </div>
-
-    <script src="/static/dashboard.js" defer></script>
 
     <!-- ============================================================
-     📣 ANNOUNCEMENT MODAL
-     ============================================================ -->
-
+         📣 ANNOUNCEMENT CREATION MODAL
+         ============================================================ -->
     <div id="announcementModal" class="modal">
         <div class="modal-backdrop" id="announcementBackdrop"></div>
-        <div class="modal-content card">
-            <div class="card-header">
-                <div class="card-title">
-                    <i class="fas fa-bullhorn"></i> New Announcement
-                </div>
-                <button class="nav-btn" onclick="closeAnnouncementModal()">
-                    <i class="fas fa-times"></i>
-                </button>
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-bullhorn"></i> <span>Broadcast Announcement</span></div>
+                <button class="modal-close-btn" onclick="closeAnnouncementModal()"><i class="fas fa-times"></i></button>
             </div>
-
             <div class="modal-body">
                 <div class="form-group">
-                    <label for="annTitle">Title (optional)</label>
-                    <input id="annTitle" type="text" placeholder="e.g. Night Shift Briefing">
+                    <label for="annTitle">Title (Optional)</label>
+                    <input id="annTitle" type="text" class="form-input" placeholder="e.g. Security Briefing">
                 </div>
-
                 <div class="form-group">
-                    <label for="annMessage">Message *</label>
-                    <textarea id="annMessage" rows="4"
-                        placeholder="Enter the message that will be read on the device..."></textarea>
+                    <label for="annMessage">Message (Read aloud on device via TTS) *</label>
+                    <textarea id="annMessage" class="form-textarea" rows="3"
+                        placeholder="Enter message text..."></textarea>
                 </div>
-
                 <div class="form-group">
-                    <label for="annDevice">Target Device</label>
-                    <select id="annDevice">
-                        <!-- filled by JS: broadcast + devices -->
+                    <label for="annDevice">Target Hardware</label>
+                    <select id="annDevice" class="form-select"></select>
+                </div>
+                <div class="form-group">
+                    <label for="annPriority">Priority</label>
+                    <select id="annPriority" class="form-select">
+                        <option value="NORMAL">Normal</option>
+                        <option value="HIGH">High</option>
+                        <option value="CRITICAL">Critical</option>
                     </select>
                 </div>
-
-                <div class="form-row" style="display:flex; gap:1rem; flex-wrap:wrap;">
-                    <div class="form-group">
-                        <label for="annPriority">Priority</label>
-                        <select id="annPriority">
-                            <option value="NORMAL">Normal</option>
-                            <option value="HIGH">High</option>
-                            <option value="CRITICAL">Critical</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label><input type="checkbox" id="annTTS" checked> Text-to-Speech</label><br>
-                        <label><input type="checkbox" id="annVibrate"> Vibrate</label><br>
-                        <label><input type="checkbox" id="annRaiseAlert"> Raise alert</label>
-                    </div>
+                <div style="display: flex; gap: 16px; margin-top: 4px;">
+                    <label><input type="checkbox" id="annTTS" checked> Text-to-Speech</label>
+                    <label><input type="checkbox" id="annVibrate"> Vibrate</label>
+                    <label><input type="checkbox" id="annRaiseAlert"> Raise Alert</label>
                 </div>
             </div>
+            <div class="modal-footer">
+                <button class="btn-saas btn-saas-secondary" id="btnAnnouncementCancel">Cancel</button>
+                <button class="btn-saas btn-saas-primary" id="btnAnnouncementSend"><i class="fas fa-paper-plane"></i>
+                    Broadcast</button>
+            </div>
+        </div>
+    </div>
 
-            <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:0.75rem;">
-                <button class="btn" id="btnAnnouncementCancel">Cancel</button>
-                <button class="btn btn-primary" id="btnAnnouncementSend">
-                    <i class="fas fa-paper-plane"></i> Send
+    <!-- ============================================================
+         🗺️ GEOFENCE CREATION MODAL
+         ============================================================ -->
+    <div id="createGeofenceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-draw-polygon"></i> <span>Create Geofence Zone</span></div>
+                <button class="modal-close-btn" onclick="closeCreateModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Zone Name</label>
+                    <input type="text" id="geofenceName" class="form-input" placeholder="e.g. Restricted Area 1">
+                </div>
+                <div class="form-group">
+                    <label>Radius (meters)</label>
+                    <input type="number" id="geofenceRadius" class="form-input" value="100" min="10" max="5000">
+                </div>
+                <div class="form-group">
+                    <label>Color</label>
+                    <input type="text" id="geofenceColor" class="form-input" value="#3B82F6">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-saas btn-saas-secondary" onclick="closeCreateModal()">Cancel</button>
+                <button class="btn-saas btn-saas-primary" onclick="saveGeofence()"><i class="fas fa-save"></i> Save
+                    Zone</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Geofence Management List Modal -->
+    <div id="geofenceModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-layer-group"></i> <span>Active Geofences</span></div>
+                <button class="modal-close-btn" onclick="closeGeofenceModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="geofenceListModal"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         🎯 DEVICE TARGETING MODAL (FOR FLEET MODE COMMANDS)
+         ============================================================ -->
+    <div id="deviceTargetModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="targetModalTitle">
+                    <i class="fas fa-crosshairs" style="color: var(--accent-primary);"></i>
+                    <span>Select Target Device</span>
+                </div>
+                <button class="modal-close-btn" onclick="closeDeviceTargetModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <p id="targetModalDesc" style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.5;">
+                    You are in <strong>All Devices (Fleet)</strong> mode. Please select a specific hardware device to
+                    receive this action:
+                </p>
+                <div class="form-group">
+                    <label for="targetDeviceSelect">Target Device</label>
+                    <select id="targetDeviceSelect" class="form-select">
+                        <!-- Populated dynamically with connected / known devices -->
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-saas btn-saas-secondary" onclick="closeDeviceTargetModal()">Cancel</button>
+                <button class="btn-saas btn-saas-primary" id="btnTargetModalProceed"
+                    onclick="proceedDeviceTargetAction()">
+                    <span>Select & Proceed</span> <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
         </div>
     </div>
 
+    <!-- Notification Toast Container -->
+    <div class="notification-container" id="notificationContainer"></div>
 
+    <!-- Scripts -->
+    <script src="/static/dashboard.js?v=2.7" defer></script>
 </body>
 
 </html>

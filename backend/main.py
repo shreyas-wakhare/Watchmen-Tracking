@@ -24,6 +24,15 @@ import time
 import logging
 
 
+# -------------------- CONFIGURATION BOOTSTRAP --------------------
+try:
+    import backend.config
+except ImportError:
+    try:
+        import config
+    except ImportError:
+        pass
+
 # -------------------- SETUP --------------------
 app = FastAPI(title="Watchmen Tracker", version="4.2") # Bumped version
 
@@ -50,7 +59,9 @@ app.mount("/bugs", StaticFiles(directory=BUG_DIR), name="bugs")
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 app.mount("/incidents", StaticFiles(directory=INCIDENTS_DIR), name="incidents")
 app.mount("/videos", StaticFiles(directory=VIDEO_DIR), name="videos")
-app.mount("/static", StaticFiles(directory="static"), name="static")
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+os.makedirs(STATIC_DIR, exist_ok=True)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -58,28 +69,55 @@ logging.basicConfig(
 )
 logger = logging.getLogger("watchmen")
 
-Base = declarative_base()
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./watchmen_test.db")
+try:
+    from backend.db import (
+        Base,
+        engine,
+        SessionLocal,
+        get_db,
+        DATABASE_URL,
+        TelemetryDB,
+        AlertDB,
+        AnnouncementDB,
+        TrialFailureDB,
+        GeofenceDB,
+        GeofenceEventDB,
+        IncidentDB,
+        CheckpointDB,
+        CrashReportDB,
+        BugReportDB,
+        SecurityAlertDB,
+        AnnouncementReceiptDB,
+    )
+except ImportError:
+    from db import (
+        Base,
+        engine,
+        SessionLocal,
+        get_db,
+        DATABASE_URL,
+        TelemetryDB,
+        AlertDB,
+        AnnouncementDB,
+        TrialFailureDB,
+        GeofenceDB,
+        GeofenceEventDB,
+        IncidentDB,
+        CheckpointDB,
+        CrashReportDB,
+        BugReportDB,
+        SecurityAlertDB,
+        AnnouncementReceiptDB,
+    )
 
-connect_args = {}
-if "postgresql" in DATABASE_URL or "postgres" in DATABASE_URL:
-    connect_args = {"options": "-c statement_timeout=60000"}
+try:
+    from backend.auth import auth_router
+except ImportError:
+    from auth import auth_router
 
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,
-    connect_args=connect_args
-)
+app.include_router(auth_router)
 
 
-SessionLocal = sessionmaker(bind=engine)
-# -------------------- DB DEPENDENCY --------------------
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 # -------------------- TIME UTILITIES --------------------
 UTC = timezone.utc
@@ -129,7 +167,7 @@ def parse_timestamp(ts: Optional[Union[str, int]]) -> datetime:
     
     return utc_now()
 
-# -------------------- DATABASE MODELS --------------------
+# -------------------- PYDANTIC SCHEMAS --------------------
 class OfflineTelemetryPoint(BaseModel):
     lat: float
     lon: float
@@ -139,189 +177,9 @@ class OfflineTelemetryPoint(BaseModel):
     brg: float
     st: str
 
-class TelemetryDB(Base):
-    __tablename__ = "telemetry"
-    id = Column(Integer, primary_key=True, index=True)
-    device_id = Column(String, index=True)
-    device_name = Column(String, nullable=True)
-    project_number = Column(String, nullable=True, index=True)
-    latitude = Column(Float, nullable=False)
-    longitude = Column(Float, nullable=False)
-    speed = Column(Float, default=0.0)
-    bearing = Column(Float, default=0.0)
-    altitude = Column(Float, default=0.0)
-    accuracy = Column(Float, default=0.0)
-    steps = Column(Integer, default=0)
-    battery = Column(Float)
-    offline = Column(Integer, default=0)
-    tracking_state = Column(String, default="MOVING", index=True)
-    movement_context = Column(JSON, nullable=True)
-    device_health = Column(JSON, nullable=True)
-    timestamp = Column(DateTime(timezone=True), default=utc_now, index=True)
-    created_at = Column(DateTime(timezone=True), default=utc_now)
-
-class AlertDB(Base):
-    __tablename__ = "alerts"
-    id = Column(Integer, primary_key=True, index=True)
-    device_id = Column(String, index=True)
-    alert_type = Column(String, index=True)
-    violation_type = Column(String, nullable=True)
-    latitude = Column(Float, nullable=True)
-    longitude = Column(Float, nullable=True)
-    accuracy = Column(Float, nullable=True)
-    battery = Column(Float, nullable=True)
-    reason = Column(Text, nullable=True)
-    details = Column(Text, nullable=True)
-    priority = Column(String, default="NORMAL")
-    timestamp = Column(DateTime(timezone=True), default=utc_now, index=True)
-    resolved = Column(Boolean, default=False)
-
-    image_path = Column(String, nullable=True)  # ✅ FIX
-    liveness_verified = Column(Boolean, default=False)
-    liveness_confidence = Column(Float, default=0.0)
-    spoof_type = Column(String, default="none")
-    liveness_reasons = Column(Text, nullable=True)
-    override_used = Column(Boolean, default=False)
 class AnnouncementAck(BaseModel):
     device_id: str
     status: Literal["PLAYED", "DISMISSED", "FAILED"]
-
-class AnnouncementDB(Base):
-    __tablename__ = "announcements"
-
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False)
-    message = Column(Text, nullable=False)
-    priority = Column(String, default="NORMAL")
-    language = Column(String, default="en")
-    tts = Column(Boolean, default=True)
-    vibrate = Column(Boolean, default=False)
-    raise_alert = Column(Boolean, default=False)
-
-    device_id = Column(String, nullable=True)  # NULL = broadcast
-
-    created_at = Column(DateTime(timezone=True), default=utc_now)
-    expires_at = Column(DateTime(timezone=True), nullable=True)
-
-
-
-class TrialFailureDB(Base):
-    """ ✅ NEW TABLE: Tracks failed liveness attempts (from TrialManager) """
-    __tablename__ = "trial_failures"
-    id = Column(Integer, primary_key=True, index=True)
-    device_id = Column(String, index=True)
-    attempt_number = Column(Integer)
-    confidence = Column(Float)
-    reasons = Column(Text)
-    timestamp = Column(DateTime(timezone=True), default=utc_now)
-
-class GeofenceDB(Base):
-    __tablename__ = "geofences"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    type = Column(String, default="circle")
-    latitude = Column(Float, nullable=True)
-    longitude = Column(Float, nullable=True)
-    radius = Column(Float, nullable=True)
-    coordinates = Column(JSON, nullable=True)
-    color = Column(String, default="#00f5ff")
-    enabled = Column(Boolean, default=True)
-    created_at = Column(DateTime(timezone=True), default=utc_now)
-    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
-
-class GeofenceEventDB(Base):
-    __tablename__ = "geofence_events"
-    id = Column(Integer, primary_key=True, index=True)
-    device_id = Column(String, index=True)
-    geofence_id = Column(Integer, ForeignKey("geofences.id"))
-    geofence_name = Column(String)
-    event_type = Column(String, index=True)
-    latitude = Column(Float)
-    longitude = Column(Float)
-    timestamp = Column(DateTime(timezone=True), default=utc_now, index=True)
-
-class IncidentDB(Base):
-    __tablename__ = "incidents"
-    id = Column(Integer, primary_key=True, index=True)
-    device_id = Column(String, index=True)
-    incident_type = Column(String, index=True)
-    description = Column(Text)
-    latitude = Column(Float)
-    longitude = Column(Float)
-    accuracy = Column(Float, nullable=True)
-    has_photo = Column(Boolean, default=False)
-    photo_path = Column(String, nullable=True)
-    timestamp = Column(DateTime(timezone=True), default=utc_now, index=True)
-    resolved = Column(Boolean, default=False)
-
-class CheckpointDB(Base):
-    __tablename__ = "checkpoints"
-    id = Column(Integer, primary_key=True, index=True)
-    device_id = Column(String, index=True)
-    checkpoint_id = Column(String, index=True)
-    checkpoint_name = Column(String)
-    latitude = Column(Float)
-    longitude = Column(Float)
-    timestamp = Column(DateTime(timezone=True), default=utc_now, index=True)
-
-class CrashReportDB(Base):
-    __tablename__ = "crash_reports"
-    id = Column(Integer, primary_key=True, index=True)
-    device_id = Column(String, index=True)
-    crash_time = Column(DateTime(timezone=True))
-    error_message = Column(Text)
-    stacktrace = Column(Text)
-    created_at = Column(DateTime(timezone=True), default=utc_now)
-class BugReportDB(Base):
-    __tablename__ = "bug_reports"
-
-    id = Column(Integer, primary_key=True, index=True)
-    device_id = Column(String, index=True, nullable=False)
-    app_version = Column(String, nullable=True)
-    os_version = Column(String, nullable=True)
-    device_model = Column(String, nullable=True)
-
-    title = Column(String, nullable=False)
-    description = Column(Text, nullable=False)
-    severity = Column(String, default="MEDIUM")  # LOW | MEDIUM | HIGH | CRITICAL
-
-    screenshot_path = Column(String, nullable=True)
-    logs = Column(Text, nullable=True)
-
-    created_at = Column(DateTime(timezone=True), default=utc_now)
-    resolved = Column(Boolean, default=False)
-
-class SecurityAlertDB(Base):
-    __tablename__ = "security_alerts"
-    id = Column(Integer, primary_key=True, index=True)
-    device_id = Column(String, index=True)
-    alert_type = Column(String, index=True)
-    details = Column(Text)
-    timestamp = Column(DateTime(timezone=True), default=utc_now, index=True)
-
-class AnnouncementReceiptDB(Base):
-    __tablename__ = "announcement_receipts"
-
-    id = Column(Integer, primary_key=True)
-    announcement_id = Column(
-        Integer, ForeignKey("announcements.id", ondelete="CASCADE"),
-        index=True
-    )
-    device_id = Column(String, index=True)
-
-    delivered_at = Column(DateTime(timezone=True), nullable=True)
-    acked_at = Column(DateTime(timezone=True), nullable=True)
-
-    ack_status = Column(String, nullable=True)  # PLAYED | DISMISSED | FAILED
-    retry_count = Column(Integer, default=0)
-
-    __table_args__ = (
-        # one receipt per announcement per device
-        {'sqlite_autoincrement': True},
-    )
-Base.metadata.create_all(bind=engine)
-
-# -------------------- PYDANTIC SCHEMAS --------------------
 class Telemetry(BaseModel):
     device_id: str = Field(..., alias="deviceid")
     device_name: Optional[str] = Field(None, alias="devicename")
@@ -625,7 +483,18 @@ async def process_telemetry_payload(body: dict, db: Session, broadcast: bool = T
 # ============================================================
 @app.get("/")
 async def index():
-    return FileResponse("static/dashboard.html")
+    return FileResponse(os.path.join(STATIC_DIR, "dashboard.html"))
+
+
+@app.get("/login")
+async def login_page():
+    return FileResponse(os.path.join(STATIC_DIR, "login.html"))
+
+
+@app.get("/signup")
+async def signup_page():
+    return FileResponse(os.path.join(STATIC_DIR, "signup.html"))
+
 
 
 

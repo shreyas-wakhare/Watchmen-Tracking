@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Create Account | Watchmen Elite Command & Control</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Watchmen Elite Design System -->
+    <link rel="stylesheet" href="/static/css/watchmen-elite.css?v=3.0">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <!-- Brand & Title Header -->
+        <div class="auth-header">
+            <div class="auth-brand-badge">DWEX SECURITY</div>
+            <h1 class="auth-title">Watchmen Elite</h1>
+            <p class="auth-subtitle">Create your Command Center operator account</p>
+        </div>
+
+        <!-- Auth Card -->
+        <div class="auth-card">
+            <!-- Alert Banner -->
+            <div id="signupAlert" class="auth-alert" style="display: none;">
+                <i class="fas fa-exclamation-circle" id="signupAlertIcon"></i>
+                <span id="signupAlertText"></span>
+            </div>
+
+            <!-- Signup Form -->
+            <form id="signupForm" class="auth-form">
+                <div class="form-group">
+                    <label for="signupFullName">FULL NAME</label>
+                    <div class="auth-input-wrapper">
+                        <i class="fas fa-user auth-input-icon"></i>
+                        <input type="text" id="signupFullName" class="form-input" placeholder="John Doe" required autocomplete="name">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="signupEmail">EMAIL ADDRESS</label>
+                    <div class="auth-input-wrapper">
+                        <i class="fas fa-envelope auth-input-icon"></i>
+                        <input type="email" id="signupEmail" class="form-input" placeholder="user@example.com" required autocomplete="email">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="signupPassword">PASSWORD (MINIMUM 8 CHARACTERS)</label>
+                    <div class="auth-input-wrapper">
+                        <i class="fas fa-lock auth-input-icon"></i>
+                        <input type="password" id="signupPassword" class="form-input" placeholder="••••••••" required minlength="8" autocomplete="new-password">
+                        <button type="button" class="auth-toggle-pwd" id="togglePasswordBtn" title="Toggle password visibility">
+                            <i class="fas fa-eye" id="togglePasswordIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="signupConfirmPassword">CONFIRM PASSWORD</label>
+                    <div class="auth-input-wrapper">
+                        <i class="fas fa-check-double auth-input-icon"></i>
+                        <input type="password" id="signupConfirmPassword" class="form-input" placeholder="••••••••" required minlength="8" autocomplete="new-password">
+                    </div>
+                </div>
+
+                <button type="submit" id="signupSubmitBtn" class="btn-saas btn-saas-primary auth-submit-btn">
+                    <span>Create Account</span> <i class="fas fa-user-plus"></i>
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                Already have an account? <a href="/login">Sign In</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const signupForm = document.getElementById('signupForm');
+            const signupFullName = document.getElementById('signupFullName');
+            const signupEmail = document.getElementById('signupEmail');
+            const signupPassword = document.getElementById('signupPassword');
+            const signupConfirmPassword = document.getElementById('signupConfirmPassword');
+            const signupSubmitBtn = document.getElementById('signupSubmitBtn');
+            const signupAlert = document.getElementById('signupAlert');
+            const signupAlertText = document.getElementById('signupAlertText');
+            const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+            const togglePasswordIcon = document.getElementById('togglePasswordIcon');
+
+            // Password visibility toggle
+            togglePasswordBtn.addEventListener('click', () => {
+                const type = signupPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+                signupPassword.setAttribute('type', type);
+                signupConfirmPassword.setAttribute('type', type);
+                togglePasswordIcon.className = type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+            });
+
+            function showAlert(message, type = 'danger') {
+                signupAlertText.textContent = message;
+                signupAlert.className = `auth-alert ${type === 'success' ? 'success' : ''}`;
+                signupAlert.style.display = 'flex';
+            }
+
+            function hideAlert() {
+                signupAlert.style.display = 'none';
+            }
+
+            signupForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                hideAlert();
+
+                const fullName = signupFullName.value.trim();
+                const email = signupEmail.value.trim();
+                const password = signupPassword.value;
+                const confirmPassword = signupConfirmPassword.value;
+
+                // Client-side validations
+                if (!fullName) {
+                    showAlert('Please enter your full name.');
+                    return;
+                }
+
+                if (!email) {
+                    showAlert('Please enter a valid email address.');
+                    return;
+                }
+
+                if (password.length < 8) {
+                    showAlert('Password must be at least 8 characters long.');
+                    return;
+                }
+
+                if (password !== confirmPassword) {
+                    showAlert('Passwords do not match. Please re-enter your password.');
+                    return;
+                }
+
+                // Loading State
+                signupSubmitBtn.disabled = true;
+                signupSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating account...';
+
+                try {
+                    const response = await fetch('/auth/signup', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            email: email,
+                            password: password,
+                            full_name: fullName
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.status === 201) {
+                        showAlert('Account created successfully! Redirecting to Sign In...', 'success');
+                        setTimeout(() => {
+                            window.location.href = '/login';
+                        }, 1200);
+                    } else {
+                        signupSubmitBtn.disabled = false;
+                        signupSubmitBtn.innerHTML = '<span>Create Account</span> <i class="fas fa-user-plus"></i>';
+
+                        if (response.status === 409) {
+                            showAlert('An account with this email address already exists.');
+                        } else if (response.status === 422) {
+                            showAlert('Validation error. Please verify your email and password (minimum 8 characters).');
+                        } else if (data.detail) {
+                            showAlert(data.detail);
+                        } else {
+                            showAlert('Registration failed. Please try again.');
+                        }
+                    }
+                } catch (err) {
+                    console.error('Signup error:', err);
+                    signupSubmitBtn.disabled = false;
+                    signupSubmitBtn.innerHTML = '<span>Create Account</span> <i class="fas fa-user-plus"></i>';
+                    showAlert('Unable to connect to the server. Please check your connection.');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
