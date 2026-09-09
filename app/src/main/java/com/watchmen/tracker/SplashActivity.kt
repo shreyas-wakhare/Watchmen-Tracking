@@ -12,6 +12,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityOptionsCompat
 import androidx.lifecycle.lifecycleScope
 import com.watchmen.tracker.BuildConfig
+import com.watchmen.tracker.auth.AuthManager
+import com.watchmen.tracker.auth.LoginActivity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -30,6 +32,9 @@ class SplashActivity : AppCompatActivity() {
         window.requestFeature(android.view.Window.FEATURE_ACTIVITY_TRANSITIONS)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_splash)
+
+        AuthManager.init(this)
+        BackendEndpointManager.init(this)
 
         // 1. Initialize Views (using updated IDs from the enhanced XML)
         val logo = findViewById<ImageView>(R.id.iv_app_logo)
@@ -71,17 +76,23 @@ class SplashActivity : AppCompatActivity() {
             .setInterpolator(DecelerateInterpolator())
             .start()
 
-        // 5. Delay and Transition to Main Activity
+        // 5. Delay and Transition based on Auth State
         lifecycleScope.launch {
             delay(SPLASH_DISPLAY_TIME)
 
-            val intent = Intent(this@SplashActivity, MainActivity::class.java)
+            val targetActivity = if (AuthManager.isLoggedIn(this@SplashActivity)) {
+                MainActivity::class.java
+            } else {
+                LoginActivity::class.java
+            }
+
+            val intent = Intent(this@SplashActivity, targetActivity)
 
             // Shared Element Transition setup
             val options = ActivityOptionsCompat.makeSceneTransitionAnimation(
                 this@SplashActivity,
                 logo as View,
-                getString(R.string.logo_transition_name) // <-- RESOLVED: Now uses the defined string resource
+                getString(R.string.logo_transition_name)
             )
 
             startActivity(intent, options.toBundle())

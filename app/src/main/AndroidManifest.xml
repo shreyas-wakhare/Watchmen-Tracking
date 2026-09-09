@@ -85,6 +85,23 @@
             android:name=".AppGuideActivity"
             android:exported="false" />
 
+        <!-- ===== Authentication Activities ===== -->
+        <activity
+            android:name=".auth.LoginActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.DWEX"
+            android:windowSoftInputMode="adjustResize"
+            tools:ignore="LockedOrientationActivity" />
+
+        <activity
+            android:name=".auth.SignupActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.DWEX"
+            android:windowSoftInputMode="adjustResize"
+            tools:ignore="LockedOrientationActivity" />
+
         <!-- ===== SPLASH SCREEN (LAUNCHER) ===== -->
         <activity
             android:name=".SplashActivity"
@@ -97,6 +114,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
 
         <!-- ===== Main Activity ===== -->
         <activity

@@ -225,4 +225,24 @@ If the audio is unclear or missed, a written notification will be displayed. Ple
     <string name="guide_button_label">App Guide</string>
     <string name="guide_swipe_hint">Swipe left or right to continue →</string>
 
+    <!-- ===== Authentication Strings ===== -->
+    <string name="login_title">Welcome Back</string>
+    <string name="login_subtitle">Sign in to Watchmen Tracker</string>
+    <string name="email_hint">Email Address</string>
+    <string name="password_hint">Password</string>
+    <string name="confirm_password_hint">Confirm Password</string>
+    <string name="full_name_hint">Full Name</string>
+    <string name="btn_login">LOGIN</string>
+    <string name="btn_signup">CREATE ACCOUNT</string>
+    <string name="no_account_prompt">Don\'t have an account? Sign Up</string>
+    <string name="already_have_account_prompt">Already have an account? Login</string>
+    <string name="signup_title">Create Account</string>
+    <string name="signup_subtitle">Register for Watchmen Tracker</string>
+    <string name="err_empty_name">Full Name cannot be empty</string>
+    <string name="err_empty_email">Email cannot be empty</string>
+    <string name="err_invalid_email">Please enter a valid email address</string>
+    <string name="err_empty_password">Password cannot be empty</string>
+    <string name="err_short_password">Password must be at least 8 characters</string>
+    <string name="err_password_mismatch">Passwords do not match</string>
 </resources>
+

@@ -2,7 +2,8 @@ package com.watchmen.tracker
 
 import android.content.Context
 import android.util.Log
-import okhttp3.HttpUrl
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -10,8 +11,10 @@ import java.util.concurrent.CopyOnWriteArrayList
  * Single Source of Truth for backend server URL resolution and dynamic configuration.
  *
  * Automatically manages:
+ * - Centralized mDNS discovery ownership via embedded BackendDiscoveryManager
+ * - Discovery state representation (UNCONFIGURED, DISCOVERING, CONNECTED, DISCOVERY_FAILED)
  * - Deterministic resolution: mDNS discovery -> Cached last-known endpoint -> Unconfigured state
- * - Strict zero-fallback: Absolutely NO machine-specific developer LAN IP (192.168.x.x) is hardcoded
+ * - Strict zero-fallback: Absolutely NO machine-specific developer LAN IP is hardcoded
  * - Dynamic derivation: WebSocket Base URL is strictly derived from HTTP Base URL (http->ws, https->wss)
  * - Safe URL construction: Handles trailing/leading slashes, segments, and parameter encoding
  * - Thread-safe, coroutine-friendly listener notifications when endpoint changes
@@ -22,37 +25,72 @@ object BackendEndpointManager {
     private const val PREF_NAME = "watchmen_prefs"
     private const val KEY_SERVER_URL = "server_url"
 
+    enum class DiscoveryState {
+        UNCONFIGURED,
+        DISCOVERING,
+        CONNECTED,
+        DISCOVERY_FAILED
+    }
+
     @Volatile
     private var activeHttpBaseUrl: String? = null
 
     @Volatile
     private var activeWebSocketBaseUrl: String? = null
 
+    @Volatile
+    private var currentDiscoveryState: DiscoveryState = DiscoveryState.UNCONFIGURED
+
+    private var globalDiscoveryManager: BackendDiscoveryManager? = null
     private val listeners = CopyOnWriteArrayList<EndpointChangeListener>()
     private var isInitialized = false
 
     interface EndpointChangeListener {
-        fun onEndpointChanged(newHttpUrl: String, newWsUrl: String)
+        fun onEndpointChanged(newHttpUrl: String, newWsUrl: String) {}
+        fun onDiscoveryStateChanged(state: DiscoveryState, currentUrl: String?) {}
     }
 
     /**
-     * Initialize endpoint manager from SharedPreferences cached endpoint if previously discovered/configured.
+     * Initialize endpoint manager and start global mDNS discovery on application launch.
      */
     @Synchronized
     fun init(context: Context) {
-        if (isInitialized) return
-        val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-        val savedUrl = prefs.getString(KEY_SERVER_URL, null)
+        val appContext = context.applicationContext
+        if (!isInitialized) {
+            val prefs = appContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            val savedUrl = prefs.getString(KEY_SERVER_URL, null)
 
-        if (!savedUrl.isNullOrBlank()) {
-            val normalized = normalizeUrl(savedUrl)
-            if (normalized != null) {
-                applyEndpointInternal(normalized, notifyListeners = false)
+            if (!savedUrl.isNullOrBlank()) {
+                val normalized = normalizeUrl(savedUrl)
+                if (normalized != null) {
+                    applyEndpointInternal(normalized, notifyListeners = false)
+                    setDiscoveryState(DiscoveryState.CONNECTED)
+                }
             }
+
+            isInitialized = true
+            logI(TAG, "BackendEndpointManager initialized. Configured: ${isConfigured()} | HTTP: $activeHttpBaseUrl | State: $currentDiscoveryState")
         }
 
-        isInitialized = true
-        logI(TAG, "WS DEBUG: BackendEndpointManager.init | Configured: ${isConfigured()} | HTTP: $activeHttpBaseUrl | WS: $activeWebSocketBaseUrl")
+        // Always ensure global mDNS discovery is active
+        startGlobalDiscovery(appContext)
+    }
+
+    @Synchronized
+    fun startGlobalDiscovery(context: Context) {
+        val appContext = context.applicationContext
+        if (globalDiscoveryManager == null) {
+            globalDiscoveryManager = BackendDiscoveryManager(appContext)
+        }
+        if (!isConfigured()) {
+            setDiscoveryState(DiscoveryState.DISCOVERING)
+        }
+        globalDiscoveryManager?.startDiscovery()
+    }
+
+    @Synchronized
+    fun stopGlobalDiscovery() {
+        globalDiscoveryManager?.stopDiscovery()
     }
 
     /**
@@ -60,23 +98,59 @@ object BackendEndpointManager {
      */
     fun isConfigured(): Boolean = !activeHttpBaseUrl.isNullOrBlank()
 
+    fun getDiscoveryState(): DiscoveryState = currentDiscoveryState
+
     /**
-     * Update active server URL at runtime (e.g. from mDNS discovery or UI settings).
-     * Returns true if URL was valid and applied.
+     * Awaits endpoint resolution if discovery is currently active.
+     * Returns resolved HTTP base URL, or null if timeout occurs.
+     */
+    suspend fun awaitEndpoint(timeoutMs: Long = 3000L): String? {
+        if (isConfigured()) {
+            return activeHttpBaseUrl
+        }
+
+        return withTimeoutOrNull(timeoutMs) {
+            while (!isConfigured() && currentDiscoveryState == DiscoveryState.DISCOVERING) {
+                delay(100L)
+            }
+            activeHttpBaseUrl
+        }
+    }
+
+    /**
+     * Update active server URL at runtime (from mDNS discovery or manual configuration).
      */
     fun updateEndpoint(rawUrl: String, context: Context? = null): Boolean {
-        logI(TAG, "WS DEBUG: updateEndpoint called with rawUrl: $rawUrl")
+        logI(TAG, "updateEndpoint called with rawUrl: $rawUrl")
         val normalized = normalizeUrl(rawUrl) ?: return false
         val changed = applyEndpointInternal(normalized, notifyListeners = true)
-        logI(TAG, "WS DEBUG: updateEndpoint applied | changed: $changed | HTTP: $activeHttpBaseUrl | WS: $activeWebSocketBaseUrl")
+        setDiscoveryState(DiscoveryState.CONNECTED)
 
-        if (context != null && changed && activeHttpBaseUrl != null) {
-            val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        if (context != null && activeHttpBaseUrl != null) {
+            val prefs = context.applicationContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
             prefs.edit().putString(KEY_SERVER_URL, activeHttpBaseUrl).apply()
             logI(TAG, "Saved new backend URL to preferences: $activeHttpBaseUrl")
         }
 
         return true
+    }
+
+    fun notifyDiscoveryFailed() {
+        if (!isConfigured()) {
+            setDiscoveryState(DiscoveryState.DISCOVERY_FAILED)
+        }
+    }
+
+    private fun setDiscoveryState(newState: DiscoveryState) {
+        currentDiscoveryState = newState
+        logI(TAG, "[BackendEndpoint] Discovery state -> $newState (URL: $activeHttpBaseUrl)")
+        for (listener in listeners) {
+            try {
+                listener.onDiscoveryStateChanged(newState, activeHttpBaseUrl)
+            } catch (e: Exception) {
+                logE(TAG, "Error notifying discovery state listener: ${e.message}", e)
+            }
+        }
     }
 
     /**
@@ -85,32 +159,24 @@ object BackendEndpointManager {
     fun clearEndpoint(context: Context? = null) {
         activeHttpBaseUrl = null
         activeWebSocketBaseUrl = null
+        setDiscoveryState(DiscoveryState.UNCONFIGURED)
+
         if (context != null) {
-            val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+            val prefs = context.applicationContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
             prefs.edit().remove(KEY_SERVER_URL).apply()
         }
         logI(TAG, "Cleared backend endpoint")
     }
 
-    /**
-     * Get the active HTTP base URL (e.g. "http://192.168.1.100:8000" or null if not yet resolved)
-     */
     fun getHttpBaseUrl(): String? = activeHttpBaseUrl
 
-    /**
-     * Get the active WebSocket base URL (e.g. "ws://192.168.1.100:8000" or null if not yet resolved)
-     */
     fun getWebSocketBaseUrl(): String? = activeWebSocketBaseUrl
 
-    /**
-     * Safely construct full HTTP URL for an endpoint path, or null if backend is not yet resolved.
-     */
     fun getHttpUrlOrNull(path: String, queryParams: Map<String, String>? = null): String? {
         val currentBase = activeHttpBaseUrl ?: return null
         val baseHttpUrl = currentBase.toHttpUrlOrNull() ?: return null
 
         val builder = baseHttpUrl.newBuilder()
-
         val cleanPath = path.trimStart('/')
         if (cleanPath.isNotEmpty()) {
             for (segment in cleanPath.split("/")) {
@@ -127,46 +193,29 @@ object BackendEndpointManager {
         return builder.build().toString()
     }
 
-    /**
-     * Safely construct full WebSocket URL for an endpoint path, or null if backend is not yet resolved.
-     */
     fun getWebSocketUrlOrNull(path: String, queryParams: Map<String, String>? = null): String? {
         val httpUrlStr = getHttpUrlOrNull(path, queryParams)
-        val wsUrl = if (httpUrlStr != null) convertToWebSocketUrl(httpUrlStr) else null
-        logI(TAG, "WS DEBUG: getWebSocketUrlOrNull | path: $path | result: $wsUrl")
-        return wsUrl
+        return if (httpUrlStr != null) convertToWebSocketUrl(httpUrlStr) else null
     }
 
-    /**
-     * Safely construct full HTTP URL for an endpoint path.
-     * Throws IllegalStateException if backend has not been discovered or configured yet.
-     */
     fun getHttpUrl(path: String, queryParams: Map<String, String>? = null): String {
         return getHttpUrlOrNull(path, queryParams)
             ?: throw IllegalStateException("Backend endpoint not yet configured or discovered")
     }
 
-    /**
-     * Safely construct full WebSocket URL for an endpoint path.
-     * Throws IllegalStateException if backend has not been discovered or configured yet.
-     */
     fun getWebSocketUrl(path: String, queryParams: Map<String, String>? = null): String {
         return getWebSocketUrlOrNull(path, queryParams)
             ?: throw IllegalStateException("Backend endpoint not yet configured or discovered")
     }
 
-    /**
-     * Register a listener for runtime endpoint changes
-     */
     fun addListener(listener: EndpointChangeListener) {
         if (!listeners.contains(listener)) {
             listeners.add(listener)
+            // Immediately dispatch initial state
+            listener.onDiscoveryStateChanged(currentDiscoveryState, activeHttpBaseUrl)
         }
     }
 
-    /**
-     * Unregister an endpoint change listener
-     */
     fun removeListener(listener: EndpointChangeListener) {
         listeners.remove(listener)
     }
@@ -174,14 +223,13 @@ object BackendEndpointManager {
     private fun applyEndpointInternal(normalizedUrl: String, notifyListeners: Boolean): Boolean {
         val newHttp = normalizedUrl.trimEnd('/')
         val newWs = convertToWebSocketUrl(newHttp)
-
         val hasChanged = newHttp != activeHttpBaseUrl
 
         activeHttpBaseUrl = newHttp
         activeWebSocketBaseUrl = newWs
 
-        if (hasChanged && notifyListeners) {
-            logI(TAG, "WS DEBUG: Backend endpoint changed! HTTP: $newHttp | WS: $newWs | notifying ${listeners.size} listeners")
+        if (notifyListeners) {
+            logI(TAG, "[BackendEndpoint] Endpoint update: HTTP: $newHttp | WS: $newWs | Notifying ${listeners.size} listeners")
             for (listener in listeners) {
                 try {
                     listener.onEndpointChanged(newHttp, newWs)
@@ -194,9 +242,6 @@ object BackendEndpointManager {
         return hasChanged
     }
 
-    /**
-     * Normalizes user-input or discovered URL to standard http/https format.
-     */
     fun normalizeUrl(rawUrl: String): String? {
         val trimmed = rawUrl.trim()
         if (trimmed.isEmpty()) return null
@@ -214,7 +259,6 @@ object BackendEndpointManager {
         val host = parsed.host
         val port = parsed.port
 
-        // Do not accept bind address 0.0.0.0 as client destination
         if (host == "0.0.0.0") return null
 
         val defaultPort = if (scheme == "https") 443 else 80
@@ -225,9 +269,6 @@ object BackendEndpointManager {
         }
     }
 
-    /**
-     * Converts http:// -> ws:// and https:// -> wss://
-     */
     private fun convertToWebSocketUrl(httpUrl: String): String {
         return when {
             httpUrl.startsWith("https://", ignoreCase = true) -> "wss://" + httpUrl.substring(8)
@@ -237,18 +278,10 @@ object BackendEndpointManager {
     }
 
     private fun logI(tag: String, msg: String) {
-        try {
-            Log.i(tag, msg)
-        } catch (e: Throwable) {
-            println("[$tag] INFO: $msg")
-        }
+        try { Log.i(tag, msg) } catch (e: Throwable) { println("[$tag] INFO: $msg") }
     }
 
     private fun logE(tag: String, msg: String, t: Throwable? = null) {
-        try {
-            Log.e(tag, msg, t)
-        } catch (e: Throwable) {
-            println("[$tag] ERROR: $msg ${t?.message ?: ""}")
-        }
+        try { Log.e(tag, msg, t) } catch (e: Throwable) { println("[$tag] ERROR: $msg ${t?.message ?: ""}") }
     }
 }

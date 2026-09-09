@@ -552,12 +552,13 @@ def get_lan_ip() -> str:
 
 _zeroconf_instance = None
 _zeroconf_info = None
+_zeroconf_task = None
 
 @app.on_event("startup")
 async def startup_event():
-    global _zeroconf_instance, _zeroconf_info
+    global _zeroconf_instance, _zeroconf_info, _zeroconf_task
     try:
-        from zeroconf import ServiceInfo
+        from zeroconf import ServiceInfo, IPVersion
         from zeroconf.asyncio import AsyncZeroconf
         import socket
 
@@ -566,7 +567,7 @@ async def startup_event():
         hostname = socket.gethostname()
 
         if local_ip != "0.0.0.0" and local_ip != "127.0.0.1":
-            _zeroconf_instance = AsyncZeroconf()
+            _zeroconf_instance = AsyncZeroconf(interfaces=[local_ip], ip_version=IPVersion.V4Only)
             _zeroconf_info = ServiceInfo(
                 "_watchmen._tcp.local.",
                 "WatchmenTrackerBackend._watchmen._tcp.local.",
@@ -577,6 +578,17 @@ async def startup_event():
             )
             await _zeroconf_instance.async_register_service(_zeroconf_info, allow_name_change=True)
             logger.info(f"📡 mDNS zeroconf service registered: WatchmenTrackerBackend on {local_ip}:{port}")
+
+            async def _periodic_mdns_broadcast():
+                while True:
+                    await asyncio.sleep(10)
+                    try:
+                        if _zeroconf_instance and _zeroconf_info:
+                            await _zeroconf_instance.async_update_service(_zeroconf_info)
+                    except Exception as e:
+                        logger.debug(f"Periodic mDNS broadcast notice: {e}")
+
+            _zeroconf_task = asyncio.create_task(_periodic_mdns_broadcast())
         else:
             logger.info(f"ℹ️ Skipping mDNS advertisement for loopback/bind-only IP {local_ip}")
     except Exception as e:
@@ -584,7 +596,9 @@ async def startup_event():
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    global _zeroconf_instance, _zeroconf_info
+    global _zeroconf_instance, _zeroconf_info, _zeroconf_task
+    if _zeroconf_task:
+        _zeroconf_task.cancel()
     if _zeroconf_instance and _zeroconf_info:
         try:
             await _zeroconf_instance.async_unregister_service(_zeroconf_info)

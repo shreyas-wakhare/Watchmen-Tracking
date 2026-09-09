@@ -1,5 +1,6 @@
 package com.watchmen.tracker
 
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -25,6 +26,22 @@ class BackendEndpointManagerTest {
         } catch (e: IllegalStateException) {
             assertTrue(e.message?.contains("not yet configured") == true)
         }
+    }
+
+    @Test
+    fun testDiscoveryStateTransitions() {
+        assertEquals(BackendEndpointManager.DiscoveryState.UNCONFIGURED, BackendEndpointManager.getDiscoveryState())
+
+        BackendEndpointManager.updateEndpoint("http://192.168.1.53:8000")
+        assertEquals(BackendEndpointManager.DiscoveryState.CONNECTED, BackendEndpointManager.getDiscoveryState())
+        assertEquals("http://192.168.1.53:8000", BackendEndpointManager.getHttpBaseUrl())
+    }
+
+    @Test
+    fun testAwaitEndpoint_whenAlreadyConfigured() = runBlocking {
+        BackendEndpointManager.updateEndpoint("http://192.168.1.53:8000")
+        val result = BackendEndpointManager.awaitEndpoint(1000)
+        assertEquals("http://192.168.1.53:8000", result)
     }
 
     @Test

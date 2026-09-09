@@ -272,6 +272,16 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         BackendEndpointManager.init(applicationContext)
+        com.watchmen.tracker.auth.AuthManager.init(applicationContext)
+
+        // ------------------------------------------------------------
+        // 0️⃣ Enforce user authentication
+        // ------------------------------------------------------------
+        if (!com.watchmen.tracker.auth.AuthManager.isLoggedIn(this)) {
+            startActivity(Intent(this, com.watchmen.tracker.auth.LoginActivity::class.java))
+            finish()
+            return
+        }
 
         // ✅ Shared preferences (declare ONCE)
         val prefs = getSharedPreferences("watchmen_prefs", MODE_PRIVATE)
@@ -285,6 +295,7 @@ class MainActivity : AppCompatActivity() {
             finish()
             return
         }
+
 
         // ------------------------------------------------------------
         // 2️⃣ Enforce guide acknowledgment
@@ -1201,6 +1212,11 @@ Time: ${SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())}
     }
 
     private fun startTrackingService() {
+        if (!com.watchmen.tracker.auth.AuthManager.isLoggedIn(this)) {
+            Log.w("Watchmen", "Cannot start service - user is not authenticated")
+            return
+        }
+
         val hasLocationPermission = ContextCompat.checkSelfPermission(
             this,
             Manifest.permission.ACCESS_FINE_LOCATION
@@ -1211,6 +1227,7 @@ Time: ${SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())}
             Log.w("Watchmen", "Cannot start service - missing location permission")
             return
         }
+
 
         try {
             val intent = Intent(this, TrackingService::class.java)

@@ -13,6 +13,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
+import com.watchmen.tracker.auth.AuthManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -413,8 +415,8 @@ class TrackingService : Service(), SensorEventListener {
     private val reconnectAttempt = java.util.concurrent.atomic.AtomicInteger(0)
     private var reconnectJob: Job? = null
     @Volatile private var isIntentionalServiceStop = false
-    private var discoveryManager: BackendDiscoveryManager? = null
     private var lastStepsForAuth = 0
+
 
 
     private var currentState = TrackingState.INITIALIZING
@@ -486,7 +488,7 @@ class TrackingService : Service(), SensorEventListener {
 
             if (!BackendEndpointManager.isConfigured()) {
                 Log.i("Watchmen", "[WS] Endpoint not configured, triggering discovery...")
-                discoveryManager?.startDiscovery()
+                BackendEndpointManager.startGlobalDiscovery(this@TrackingService)
             }
 
             connectWebSocket()
@@ -528,7 +530,7 @@ class TrackingService : Service(), SensorEventListener {
             if (wsUrl == null) {
                 Log.w("Watchmen", "[WS] Backend endpoint not yet resolved; WebSocket waiting for discovery...")
                 isConnecting.set(false)
-                discoveryManager?.startDiscovery()
+                BackendEndpointManager.startGlobalDiscovery(this@TrackingService)
                 scheduleWebSocketReconnect()
                 return
             }
@@ -819,9 +821,28 @@ class TrackingService : Service(), SensorEventListener {
     override fun onCreate() {
         super.onCreate()
         Log.i("Watchmen", "[SERVICE] TrackingService onCreate")
-        startForeground(1, createNotification())
+
+        AuthManager.init(applicationContext)
+        val isUserLoggedIn = AuthManager.isLoggedIn(applicationContext)
+        val hasLocationPermission = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (!isUserLoggedIn || !hasLocationPermission) {
+            Log.w("Watchmen", "⚠️ Defensive Guard: Aborting TrackingService.onCreate - LoggedIn=$isUserLoggedIn, LocationPerm=$hasLocationPermission")
+            stopSelf()
+            return
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(1, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+        } else {
+            startForeground(1, createNotification())
+        }
 
         isIntentionalServiceStop = false
+
 
         Log.i("Watchmen", "WS DEBUG: onCreate starting BackendEndpointManager.init")
         BackendEndpointManager.init(applicationContext)
@@ -838,9 +859,9 @@ class TrackingService : Service(), SensorEventListener {
             }
         })
 
-        discoveryManager = BackendDiscoveryManager(this)
-        Log.i("Watchmen", "[DISCOVERY] Starting discovery")
-        discoveryManager?.startDiscovery()
+        BackendEndpointManager.init(this)
+        Log.i("Watchmen", "[BackendEndpoint] Global endpoint manager initialized in TrackingService")
+
 
         if (BuildConfig.DEBUG) {
             try {
@@ -1370,7 +1391,7 @@ class TrackingService : Service(), SensorEventListener {
             updateNotification()
             sendStateBroadcast()
 
-            discoveryManager?.startDiscovery()
+            BackendEndpointManager.startGlobalDiscovery(this)
 
             reconnectAttempt.set(0)
             reconnectJob?.cancel()
@@ -1458,7 +1479,7 @@ class TrackingService : Service(), SensorEventListener {
             ttsHelper.shutdown()  // ✅ NEW: Cleanup TTS
             locationCallback?.let { fusedClient.removeLocationUpdates(it) }
             locationCallback = null
-            discoveryManager?.stopDiscovery()
+            BackendEndpointManager.stopGlobalDiscovery()
         } catch (e: Exception) {
             Log.e("Watchmen", "Cleanup error: ${e.message}")
         }

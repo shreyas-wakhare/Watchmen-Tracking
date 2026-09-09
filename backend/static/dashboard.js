@@ -1128,26 +1128,51 @@ async function requestLiveLocation() {
 }
 
 
-// -------------------- LOAD DEVICES --------------------
+// -------------------- LOAD DEVICES & CONNECTED DEVICE SYNC --------------------
 async function fetchConnectedDevices() {
     try {
-        const response = await fetch(`${BACKEND}/devices/connected`);
+        const url = (typeof BACKEND !== 'undefined' && BACKEND) ? `${BACKEND}/devices/connected` : '/devices/connected';
+        const response = await fetch(url);
         if (response.ok) {
             const data = await response.json();
-            const list = data.connected_devices || [];
+            const list = Array.isArray(data.connected_devices) ? data.connected_devices : [];
             connectedDevices = new Set(list);
+            console.log(`📱 ${list.length} devices connected:`, list);
+
+            // Ensure each connected device is tracked in deviceData
+            list.forEach(devId => {
+                if (!deviceData[devId]) deviceData[devId] = {};
+                deviceData[devId].offline = 0;
+            });
+
+            // Update top global device selector dynamically
             updateDeviceList();
+
             if (typeof updateKpiCards === 'function') updateKpiCards();
+            if (typeof updateFleetStatusMetrics === 'function') updateFleetStatusMetrics();
+            if (typeof updateActivityCarouselData === 'function') updateActivityCarouselData();
+            if (typeof updateDevicesTable === 'function') updateDevicesTable();
+            return list;
         }
     } catch (error) {
         console.error('Error fetching connected devices:', error);
     }
+    return [];
 }
 
 function getAvailableDeviceIds() {
-    const telemetryDevices = Object.keys(deviceData || {});
-    const set = new Set([...telemetryDevices, ...connectedDevices]);
-    return Array.from(set);
+    const ids = new Set();
+    if (connectedDevices && connectedDevices.size > 0) {
+        connectedDevices.forEach(id => { if (id) ids.add(id); });
+    }
+    if (deviceData) {
+        Object.keys(deviceData).forEach(id => {
+            if (id && (deviceData[id].lat !== undefined || deviceData[id].timestamp !== undefined || (connectedDevices && connectedDevices.has(id)))) {
+                ids.add(id);
+            }
+        });
+    }
+    return Array.from(ids).sort();
 }
 
 async function loadDevices() {
@@ -1174,7 +1199,7 @@ function renderDeviceSelector(devices) {
     const selector = document.getElementById('deviceSelector');
     if (!selector) return;
 
-    const current = selector.value;
+    const current = currentDeviceId || selector.value;
 
     selector.innerHTML = '<option value="">All Devices</option>';
     devices.forEach(dev => {
@@ -1184,8 +1209,14 @@ function renderDeviceSelector(devices) {
         selector.appendChild(opt);
     });
 
-    if (devices.includes(current)) {
+    if (current && devices.includes(current)) {
         selector.value = current;
+    } else {
+        selector.value = '';
+        if (currentDeviceId && !devices.includes(currentDeviceId)) {
+            // Selected device is no longer connected or available, fall back to fleet context
+            selectDevice(null);
+        }
     }
 }
 // Throttle device selector re-render (DOM heavy)
@@ -2942,32 +2973,6 @@ window.closeGeofenceModal = function () {
 
 console.log('✅ Watchmen Tracker dashboard.js loaded');
 // -------------------- COMMAND & CHAT --------------------
-// ✅ NEW: Fetch list of connected devices from backend
-async function fetchConnectedDevices() {
-    try {
-        const response = await fetch('/devices/connected');
-        if (response.ok) {
-            const data = await response.json();
-            connectedDevices = new Set(data.connected_devices);
-            console.log(`📱 ${data.count} devices connected:`, data.connected_devices);
-
-            // Ensure each connected device is tracked
-            data.connected_devices.forEach(devId => {
-                if (!deviceData[devId]) deviceData[devId] = {};
-                deviceData[devId].offline = 0;
-            });
-
-            if (typeof updateKpiCards === 'function') updateKpiCards();
-            if (typeof updateFleetStatusMetrics === 'function') updateFleetStatusMetrics();
-            if (typeof updateActivityCarouselData === 'function') updateActivityCarouselData();
-            if (typeof updateDevicesTable === 'function') updateDevicesTable();
-            return data.connected_devices;
-        }
-    } catch (e) {
-        console.error('Error fetching connected devices:', e);
-    }
-    return [];
-}
 
 async function sendCommand(command) {
     if (!currentDeviceId) {
@@ -3103,22 +3108,6 @@ function getSelectedDevice() {
     return currentDeviceId;
 }
 
-function getAvailableDeviceIds() {
-    const ids = new Set();
-    if (deviceData) {
-        Object.keys(deviceData).forEach(id => { if (id) ids.add(id); });
-    }
-    if (connectedDevices) {
-        connectedDevices.forEach(id => { if (id) ids.add(id); });
-    }
-    const selector = document.getElementById('deviceSelector');
-    if (selector && selector.options) {
-        Array.from(selector.options).forEach(opt => {
-            if (opt && opt.value) ids.add(opt.value);
-        });
-    }
-    return Array.from(ids);
-}
 
 function getScopedDevices() {
     if (isFleetContext()) {
@@ -4171,15 +4160,13 @@ function updateDevicesTable() {
     const tbody = document.getElementById('devicesTableBody');
     if (!tbody) return;
 
-    const devIds = Object.keys(deviceData);
-    if (devIds.length === 0 && connectedDevices.size > 0) {
-        connectedDevices.forEach(d => devIds.push(d));
-    }
-    if (devIds.length === 0) {
-        devIds.push('TEST001_Samsung Test_74285b00');
-    }
-
+    const devIds = getAvailableDeviceIds();
     const uniqueDevs = [...new Set(devIds)];
+
+    if (uniqueDevs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 32px;">No devices active or registered</td></tr>';
+        return;
+    }
 
     let html = '';
     uniqueDevs.forEach(devId => {
