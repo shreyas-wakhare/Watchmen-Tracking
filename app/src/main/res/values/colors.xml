@@ -1,43 +1,89 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- DWEX Brand Colors -->
-    <color name="dwex_blue">#1976D2</color>
-    <color name="dwex_blue_dark">#0D47A1</color>
-    <color name="dwex_red">#D32F2F</color>
-    <color name="dwex_red_dark">#B71C1C</color>
+    <!-- ============================================================
+         WATCHMEN ELITE DESIGN SYSTEM TOKENS (Source of Truth: watchmen-elite.css)
+         Palette: Layered Dark Surfaces (#0B0F14, #10161D, #141B23, #18212B)
+         ============================================================ -->
+
+    <!-- Background Tokens -->
+    <color name="watchmen_bg_primary">#0B0F14</color>
+    <color name="watchmen_bg_secondary">#10161D</color>
+    <color name="watchmen_bg_card">#141B23</color>
+    <color name="watchmen_bg_surface">#141B23</color>
+    <color name="watchmen_bg_elevated">#18212B</color>
+    <color name="watchmen_bg_hover">#1D2732</color>
+    <color name="watchmen_bg_input">#0E141B</color>
+
+    <!-- Border Tokens (1px, crisp) -->
+    <color name="watchmen_border_default">#26323D</color>
+    <color name="watchmen_border_subtle">#202A34</color>
+    <color name="watchmen_border_focus">#3B82F6</color>
+
+    <!-- Text Tokens -->
+    <color name="watchmen_text_primary">#F3F6F8</color>
+    <color name="watchmen_text_secondary">#98A6B5</color>
+    <color name="watchmen_text_muted">#667585</color>
+    <color name="watchmen_text_disabled">#4B5865</color>
+    <color name="watchmen_text_inverse">#0B0F14</color>
+
+    <!-- Semantic Status Colors -->
+    <color name="watchmen_online">#22C55E</color>
+    <color name="watchmen_warning">#F59E0B</color>
+    <color name="watchmen_critical">#EF4444</color>
+    <color name="watchmen_info">#38BDF8</color>
+    <color name="watchmen_primary">#3B82F6</color>
+    <color name="watchmen_primary_hover">#2563EB</color>
+    <color name="watchmen_inactive">#667585</color>
+
+    <!-- Subtle Accents (12% alpha = #1F / 25% alpha = #40) -->
+    <color name="watchmen_primary_subtle">#1F3B82F6</color>
+    <color name="watchmen_primary_border">#403B82F6</color>
+    <color name="watchmen_success_subtle">#1F22C55E</color>
+    <color name="watchmen_success_border">#4022C55E</color>
+    <color name="watchmen_warning_subtle">#1FF59E0B</color>
+    <color name="watchmen_warning_border">#40F59E0B</color>
+    <color name="watchmen_critical_subtle">#1FEF4444</color>
+    <color name="watchmen_critical_border">#40EF4444</color>
+    <color name="watchmen_info_subtle">#1F38BDF8</color>
+    <color name="watchmen_info_border">#4038BDF8</color>
+
+    <!-- Brand Badge DWEX Colors -->
+    <color name="watchmen_badge_bg">#FFFFFF</color>
+    <color name="watchmen_badge_text">#0B0F14</color>
+
+    <!-- Backward Compatibility Aliases (Mapped to Web Dashboard palette) -->
+    <color name="dwex_blue">#3B82F6</color>
+    <color name="dwex_blue_dark">#10161D</color>
+    <color name="dwex_red">#EF4444</color>
+    <color name="dwex_red_dark">#DC2626</color>
     
-    <!-- Primary Theme Colors -->
-    <color name="primary">#1976D2</color>
-    <color name="primary_dark">#0D47A1</color>
-    <color name="primary_light">#42A5F5</color>
-    <color name="accent">#D32F2F</color>
+    <color name="primary">#3B82F6</color>
+    <color name="primary_dark">#10161D</color>
+    <color name="primary_light">#60A5FA</color>
+    <color name="accent">#EF4444</color>
     
-    <!-- Background Colors -->
-    <color name="background_primary">#FFFFFF</color>
-    <color name="background_secondary">#F5F5F5</color>
-    <color name="background_dark">#121212</color>
-    <color name="icon_tint_primary">#000000</color>
-    <!-- Text Colors -->
-    <color name="text_primary">#212121</color>
-    <color name="text_secondary">#757575</color>
+    <color name="background_primary">#0B0F14</color>
+    <color name="background_secondary">#0B0F14</color>
+    <color name="background_dark">#0B0F14</color>
+    <color name="icon_tint_primary">#F3F6F8</color>
+
+    <color name="text_primary">#F3F6F8</color>
+    <color name="text_secondary">#98A6B5</color>
     <color name="text_white">#FFFFFF</color>
-    <color name="text_hint">#9E9E9E</color>
+    <color name="text_hint">#667585</color>
     
-    <!-- Status Colors -->
-    <color name="success">#4CAF50</color>
-    <color name="warning">#FF9800</color>
-    <color name="error">#F44336</color>
-    <color name="info">#2196F3</color>
+    <color name="success">#22C55E</color>
+    <color name="warning">#F59E0B</color>
+    <color name="error">#EF4444</color>
+    <color name="info">#38BDF8</color>
     
-    <!-- Card & Surface -->
-    <color name="card_background">#FFFFFF</color>
-    <color name="surface">#FAFAFA</color>
-    <color name="divider">#E0E0E0</color>
+    <color name="card_background">#141B23</color>
+    <color name="surface">#141B23</color>
+    <color name="divider">#26323D</color>
     
-    <!-- Overlay & Shadow -->
-    <color name="overlay_dark">#80000000</color>
-    <color name="shadow">#1A000000</color>
-    <color name="text_title_light">#FFFFFF</color>
-    <color name="text_subtitle_light">#E0E0E0</color>
-    <color name="progress_accent">#FFC107</color>
+    <color name="overlay_dark">#B30B0F14</color>
+    <color name="shadow">#4D000000</color>
+    <color name="text_title_light">#F3F6F8</color>
+    <color name="text_subtitle_light">#98A6B5</color>
+    <color name="progress_accent">#3B82F6</color>
 </resources>

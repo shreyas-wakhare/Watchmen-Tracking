@@ -93,16 +93,17 @@ class LoginActivity : AppCompatActivity() {
     ) {
         when {
             !currentUrl.isNullOrBlank() -> {
-                binding.tvServerStatus.text = "✅ Server: $currentUrl"
-                binding.tvServerStatus.setTextColor(getColor(R.color.dwex_blue))
+                val displayUrl = currentUrl.removePrefix("http://").removePrefix("https://")
+                binding.tvServerStatus.text = "● Connected: $displayUrl"
+                binding.tvServerStatus.setTextColor(getColor(R.color.watchmen_online))
             }
             state == BackendEndpointManager.DiscoveryState.DISCOVERING -> {
-                binding.tvServerStatus.text = "📡 Searching for Watchmen server..."
-                binding.tvServerStatus.setTextColor(getColor(R.color.text_secondary))
+                binding.tvServerStatus.text = "○ Searching for server..."
+                binding.tvServerStatus.setTextColor(getColor(R.color.watchmen_text_secondary))
             }
             else -> {
-                binding.tvServerStatus.text = "⚠️ Server not discovered. Tap ⚙️ to set IP."
-                binding.tvServerStatus.setTextColor(getColor(R.color.dwex_red))
+                binding.tvServerStatus.text = "● Server Not Found · Configure Server"
+                binding.tvServerStatus.setTextColor(getColor(R.color.watchmen_warning))
             }
         }
     }
@@ -167,7 +168,7 @@ class LoginActivity : AppCompatActivity() {
         }
 
         AlertDialog.Builder(this)
-            .setTitle("⚙️ Server Configuration")
+            .setTitle("Server Configuration")
             .setMessage("Enter the FastAPI backend HTTP base URL:")
             .setView(input)
             .setPositiveButton("Save") { _, _ ->

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Spacing Scale (Matching Web Dashboard watchmen-elite.css) -->
+    <dimen name="space_1">4dp</dimen>
+    <dimen name="space_2">8dp</dimen>
+    <dimen name="space_3">12dp</dimen>
+    <dimen name="space_4">16dp</dimen>
+    <dimen name="space_5">20dp</dimen>
+    <dimen name="space_6">24dp</dimen>
+    <dimen name="space_8">32dp</dimen>
+
+    <!-- Border Radius Scale (Restrained SaaS) -->
+    <dimen name="radius_xs">4dp</dimen>
+    <dimen name="radius_sm">6dp</dimen>
+    <dimen name="radius_md">8dp</dimen>
+    <dimen name="radius_lg">10dp</dimen>
+    <dimen name="radius_pill">999dp</dimen>
+    <dimen name="radius_card">8dp</dimen>
+    <dimen name="radius_control">6dp</dimen>
+    <dimen name="radius_modal">10dp</dimen>
+
+    <!-- Component Dimensions -->
+    <dimen name="border_width">1dp</dimen>
+    <dimen name="btn_height_sm">36dp</dimen>
+    <dimen name="btn_height_md">44dp</dimen>
+    <dimen name="btn_height_lg">52dp</dimen>
+    <dimen name="kpi_icon_size">36dp</dimen>
+    <dimen name="action_icon_size">40dp</dimen>
+    <dimen name="status_dot_size">8dp</dimen>
+    <dimen name="header_avatar_size">32dp</dimen>
+</resources>

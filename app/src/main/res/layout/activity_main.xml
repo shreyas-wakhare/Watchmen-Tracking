@@ -5,57 +5,154 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_secondary" 
+    android:background="@color/watchmen_bg_primary" 
     tools:context=".MainActivity">
 
-    <ImageView
-        android:id="@+id/iv_main_activity_logo"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
-        android:src="@drawable/logo_dwex_vector"
-        android:contentDescription="@string/dwex_logo"
-        android:scaleType="fitCenter"
-        app:tint="@color/icon_tint_primary"
-        android:elevation="4dp"
-        android:transitionName="@string/logo_transition_name"
+    <!-- ============================================================
+         TOP APP BAR / HEADER (Matching Web Dashboard top-nav)
+         ============================================================ -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/headerBar"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@color/watchmen_bg_secondary"
+        android:paddingHorizontal="16dp"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-    
-    <TextView
-        android:id="@+id/tv_main_app_name"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/app_title"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        android:textColor="@color/text_primary"
-        android:layout_marginStart="8dp"
-        app:layout_constraintStart_toEndOf="@id/iv_main_activity_logo"
-        app:layout_constraintTop_toTopOf="@id/iv_main_activity_logo"
-        app:layout_constraintBottom_toBottomOf="@id/iv_main_activity_logo"/>
-        
-    <ImageButton
-        android:id="@+id/btnSettings"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_marginEnd="16dp"
-        android:src="@android:drawable/ic_menu_preferences"
-        app:tint="@color/icon_tint_primary"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:padding="8dp"
-        android:contentDescription="@string/setup_title"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/iv_main_activity_logo"
-        app:layout_constraintBottom_toBottomOf="@id/iv_main_activity_logo" />
+        app:layout_constraintEnd_toEndOf="parent">
 
+        <!-- DWEX Brand Badge -->
+        <TextView
+            android:id="@+id/tvHeaderBrandBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_brand_badge"
+            android:text="DWEX"
+            android:textColor="@color/watchmen_badge_text"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.08"
+            android:paddingHorizontal="6dp"
+            android:paddingVertical="3dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
+        <!-- App Brand Text -->
+        <LinearLayout
+            android:id="@+id/llHeaderTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="6dp"
+            app:layout_constraintStart_toEndOf="@id/tvHeaderBrandBadge"
+            app:layout_constraintEnd_toStartOf="@id/llHeaderActions"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <TextView
+                android:id="@+id/tv_main_app_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_title"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/watchmen_text_primary"
+                android:singleLine="true" />
+
+            <TextView
+                android:id="@+id/tvHeaderSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Command &amp; Control"
+                android:textSize="10sp"
+                android:textColor="@color/watchmen_text_muted"
+                android:singleLine="true" />
+        </LinearLayout>
+
+        <!-- Header Actions: User Profile, Settings, Logout -->
+        <LinearLayout
+            android:id="@+id/llHeaderActions"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <!-- Watchman User Avatar Pill -->
+            <FrameLayout
+                android:id="@+id/userProfilePill"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:background="@drawable/bg_icon_container_elevated"
+                android:layout_marginEnd="8dp">
+
+                <TextView
+                    android:id="@+id/tvUserAvatar"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_avatar_circle"
+                    android:gravity="center"
+                    android:text="WM"
+                    android:textColor="#FFFFFF"
+                    android:textSize="10.5sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvUserName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone" />
+            </FrameLayout>
+
+            <!-- Settings Gear Button -->
+            <ImageButton
+                android:id="@+id/btnSettings"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:background="@drawable/bg_icon_container_elevated"
+                android:src="@drawable/ic_settings"
+                app:tint="@color/watchmen_text_secondary"
+                android:padding="8dp"
+                android:contentDescription="@string/setup_title"
+                android:scaleType="fitCenter"
+                android:layout_marginEnd="6dp" />
+
+            <!-- Logout / Sign Out Button -->
+            <ImageButton
+                android:id="@+id/btnLogout"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:background="@drawable/bg_icon_container_crimson"
+                android:src="@drawable/ic_logout"
+                app:tint="@color/watchmen_critical"
+                android:padding="8dp"
+                android:contentDescription="Sign Out"
+                android:scaleType="fitCenter" />
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Subtle 1px Divider below Top Bar -->
+    <View
+        android:id="@+id/headerDivider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/watchmen_border_default"
+        app:layout_constraintTop_toBottomOf="@id/headerBar" />
+
+    <!-- ============================================================
+         SCROLLABLE OPERATIONAL DASHBOARD CONTENT
+         ============================================================ -->
     <ScrollView 
         android:layout_width="match_parent"
         android:layout_height="0dp" 
         android:fillViewport="true"
-        app:layout_constraintTop_toBottomOf="@id/iv_main_activity_logo"
+        app:layout_constraintTop_toBottomOf="@id/headerDivider"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -64,154 +161,567 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="18dp">
+
+            <!-- ========================================================
+                 1. TRACKING STATUS CARD (Matching .saas-card)
+                 ======================================================== -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardTrackingStatus"
+                style="@style/Widget.DWEX.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/watchmen_border_default"
+                app:cardBackgroundColor="@color/watchmen_bg_card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Card Header (44dp, subtle bottom border) -->
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="44dp"
+                        android:paddingHorizontal="16dp"
+                        android:background="@color/watchmen_bg_card">
+
+                        <!-- Left: Status Dot + Section Title -->
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent"
+                            app:layout_constraintBottom_toBottomOf="parent">
+
+                            <View
+                                android:id="@+id/statusIndicatorDot"
+                                android:layout_width="8dp"
+                                android:layout_height="8dp"
+                                android:background="@drawable/bg_status_dot_online" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:text="TRACKING STATUS"
+                                style="@style/TextAppearance.DWEX.SectionTitle" />
+                        </LinearLayout>
+
+                        <!-- Right: Live / Active Status Badge -->
+                        <TextView
+                            android:id="@+id/tvStatusBadge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_status_badge_online"
+                            android:text="ACTIVE"
+                            android:textColor="@color/watchmen_online"
+                            android:textSize="10.5sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.06"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintTop_toTopOf="parent"
+                            app:layout_constraintBottom_toBottomOf="parent" />
+
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+
+                    <!-- Divider -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/watchmen_border_default" />
+
+                    <!-- Card Body -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <!-- Primary Status Text (Preserving R.id.statusText) -->
+                        <TextView
+                            android:id="@+id/statusText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/status_initializing"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/watchmen_text_primary"
+                            android:layout_marginBottom="14dp" />
+
+                        <!-- Status Telemetry Grid (Server, Location, Mode) -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:background="@drawable/bg_icon_container_elevated"
+                            android:padding="12dp">
+
+                            <!-- Row 1: Server Status -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:layout_marginBottom="8dp">
+
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ic_server"
+                                    app:tint="@color/watchmen_text_muted"
+                                    android:contentDescription="@null" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="8dp"
+                                    android:text="Backend Server:"
+                                    android:textColor="@color/watchmen_text_muted"
+                                    android:textSize="12sp" />
+
+                                <TextView
+                                    android:id="@+id/tvMainServerStatus"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:gravity="end"
+                                    android:text="Connected"
+                                    android:textColor="@color/watchmen_online"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold"
+                                    android:fontFamily="monospace"
+                                    android:singleLine="true" />
+                            </LinearLayout>
+
+                            <!-- Row 2: Location GPS Status -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:layout_marginBottom="8dp">
+
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ic_location"
+                                    app:tint="@color/watchmen_text_muted"
+                                    android:contentDescription="@null" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="8dp"
+                                    android:text="Location GPS:"
+                                    android:textColor="@color/watchmen_text_muted"
+                                    android:textSize="12sp" />
+
+                                <TextView
+                                    android:id="@+id/tvMainLocationStatus"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:gravity="end"
+                                    android:text="High Accuracy"
+                                    android:textColor="@color/watchmen_info"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <!-- Row 3: Operation Mode -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ic_sync"
+                                    app:tint="@color/watchmen_text_muted"
+                                    android:contentDescription="@null" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="8dp"
+                                    android:text="Service Mode:"
+                                    android:textColor="@color/watchmen_text_muted"
+                                    android:textSize="12sp" />
+
+                                <TextView
+                                    android:id="@+id/tvMainServiceMode"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:gravity="end"
+                                    android:text="Foreground Active"
+                                    android:textColor="@color/watchmen_text_primary"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ========================================================
+                 2. QUICK ACTIONS SECTION
+                 ======================================================== -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="QUICK ACTIONS"
+                style="@style/TextAppearance.DWEX.SectionTitle"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Action 1: Manual Check-In -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardCheckIn"
+                style="@style/Widget.DWEX.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="14dp">
+
+                    <FrameLayout
+                        android:layout_width="@dimen/action_icon_size"
+                        android:layout_height="@dimen/action_icon_size"
+                        android:background="@drawable/bg_icon_container_emerald">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_check_in"
+                            app:tint="@color/watchmen_online"
+                            android:contentDescription="@null" />
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="14dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/btn_check_in"
+                            android:textColor="@color/watchmen_text_primary"
+                            android:textSize="14.5sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Verify biometric face liveness"
+                            android:textColor="@color/watchmen_text_muted"
+                            android:textSize="12sp"
+                            android:layout_marginTop="2dp" />
+                    </LinearLayout>
+
+                    <!-- Hidden original button for full event compatibility -->
+                    <Button
+                        android:id="@+id/btnCheckIn"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:visibility="gone" />
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_arrow_right"
+                        app:tint="@color/watchmen_text_muted"
+                        android:contentDescription="@null" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Action 2: Scan Checkpoint -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardScanCheckpoint"
+                style="@style/Widget.DWEX.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="14dp">
+
+                    <FrameLayout
+                        android:layout_width="@dimen/action_icon_size"
+                        android:layout_height="@dimen/action_icon_size"
+                        android:background="@drawable/bg_icon_container_blue">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_qr_scan"
+                            app:tint="@color/watchmen_primary"
+                            android:contentDescription="@null" />
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="14dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/btn_scan_checkpoint"
+                            android:textColor="@color/watchmen_text_primary"
+                            android:textSize="14.5sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Scan patrol QR code checkpoint"
+                            android:textColor="@color/watchmen_text_muted"
+                            android:textSize="12sp"
+                            android:layout_marginTop="2dp" />
+                    </LinearLayout>
+
+                    <!-- Hidden original button for full event compatibility -->
+                    <Button
+                        android:id="@+id/btnScanCheckpoint"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:visibility="gone" />
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_arrow_right"
+                        app:tint="@color/watchmen_text_muted"
+                        android:contentDescription="@null" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Action 3: Incident Report -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardIncidentReport"
+                style="@style/Widget.DWEX.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="14dp">
+
+                    <FrameLayout
+                        android:layout_width="@dimen/action_icon_size"
+                        android:layout_height="@dimen/action_icon_size"
+                        android:background="@drawable/bg_icon_container_amber">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_incident"
+                            app:tint="@color/watchmen_warning"
+                            android:contentDescription="@null" />
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="14dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/btn_incident_report"
+                            android:textColor="@color/watchmen_text_primary"
+                            android:textSize="14.5sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Log security event or hazard"
+                            android:textColor="@color/watchmen_text_muted"
+                            android:textSize="12sp"
+                            android:layout_marginTop="2dp" />
+                    </LinearLayout>
+
+                    <!-- Hidden original button for full event compatibility -->
+                    <Button
+                        android:id="@+id/btnIncidentReport"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:visibility="gone" />
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_arrow_right"
+                        app:tint="@color/watchmen_text_muted"
+                        android:contentDescription="@null" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Action 4: App Guide -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardAppGuide"
+                style="@style/Widget.DWEX.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="14dp">
+
+                    <FrameLayout
+                        android:layout_width="@dimen/action_icon_size"
+                        android:layout_height="@dimen/action_icon_size"
+                        android:background="@drawable/bg_icon_container_elevated">
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_app_guide"
+                            app:tint="@color/watchmen_text_secondary"
+                            android:contentDescription="@null" />
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="14dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/guide_button_label"
+                            android:textColor="@color/watchmen_text_primary"
+                            android:textSize="14.5sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Operational instructions &amp; manual"
+                            android:textColor="@color/watchmen_text_muted"
+                            android:textSize="12sp"
+                            android:layout_marginTop="2dp" />
+                    </LinearLayout>
+
+                    <!-- Hidden original button for full event compatibility -->
+                    <Button
+                        android:id="@+id/btnAppGuide"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:visibility="gone" />
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_arrow_right"
+                        app:tint="@color/watchmen_text_muted"
+                        android:contentDescription="@null" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ========================================================
+                 3. EMERGENCY / PANIC SECTION (High-Visibility)
+                 ======================================================== -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="EMERGENCY ACTION"
+                android:textColor="@color/watchmen_critical"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:textAllCaps="true"
+                android:layout_marginBottom="10dp" />
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="4dp"
-                app:cardBackgroundColor="@color/dwex_blue"> 
+                app:strokeWidth="1.5dp"
+                app:strokeColor="@color/watchmen_critical"
+                app:cardCornerRadius="@dimen/radius_card"
+                app:cardBackgroundColor="@color/watchmen_bg_card"
+                android:layout_marginBottom="8dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="16dp">
 
-                    <TextView
+                    <!-- Panic Button (Preserving R.id.btnPanic) -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnPanic"
+                        style="@style/Widget.DWEX.Button.Danger"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Tracker Status"
-                        android:textSize="20sp"
-                        android:textColor="#FFFFFF"
+                        android:layout_height="56dp"
+                        android:text="TRIGGER PANIC ALARM"
+                        android:textSize="15.5sp"
                         android:textStyle="bold"
-                        android:layout_marginBottom="8dp"/>
+                        android:letterSpacing="0.04"
+                        app:icon="@drawable/ic_panic"
+                        app:iconGravity="textStart"
+                        app:iconPadding="10dp" />
 
+                    <!-- Emergency Instruction -->
                     <TextView
-                        android:id="@+id/statusText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/status_initializing"
-                        android:textSize="16sp"
-                        android:alpha="0.9"
-                        android:textColor="#FFFFFF" />
+                        android:text="Press and hold for 2 seconds to broadcast emergency alert to DWEX Command Center"
+                        android:textSize="11.5sp"
+                        android:textAlignment="center"
+                        android:textColor="@color/watchmen_text_muted"
+                        android:layout_marginTop="10dp" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/quick_actions"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary"
-                android:layout_marginBottom="12dp"
-                android:layout_marginTop="16dp" />
-            
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                style="@style/Widget.DWEX.Card">
-
-                <Button
-                    android:id="@+id/btnCheckIn"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/btn_check_in"
-                    android:textSize="16sp"
-                    android:padding="16dp"
-                    android:enabled="false"
-                    style="@style/Widget.Material3.Button.TextButton" />
-            </com.google.android.material.card.MaterialCardView>
-	    <com.google.android.material.card.MaterialCardView
-    		    android:layout_width="match_parent"
-    		    android:layout_height="wrap_content"
-    		    android:layout_marginBottom="12dp"
-    		    style="@style/Widget.DWEX.Card">
-
-    		<Button
-     		    android:id="@+id/btnAppGuide"
-    		    android:layout_width="match_parent"
-    		    android:layout_height="wrap_content"
-    		    android:text="@string/guide_button_label"
-    		    android:textSize="16sp"
-    		    android:padding="16dp"
-    		    style="@style/Widget.Material3.Button.TextButton"/>
-	    </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                style="@style/Widget.DWEX.Card">
-                <Button
-                    android:id="@+id/btnScanCheckpoint"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/btn_scan_checkpoint"
-                    android:textSize="16sp"
-                    android:padding="16dp"
-                    android:enabled="false"
-                    style="@style/Widget.Material3.Button.TextButton" />
-            </com.google.android.material.card.MaterialCardView>
-            
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                style="@style/Widget.DWEX.Card">
-                <Button
-                    android:id="@+id/btnIncidentReport"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/btn_incident_report"
-                    android:textSize="16sp"
-                    android:padding="16dp"
-                    android:enabled="false"
-                    style="@style/Widget.Material3.Button.TextButton" />
-            </com.google.android.material.card.MaterialCardView>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/emergency"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="@color/dwex_red_dark"
-                android:layout_marginBottom="12dp" />
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                style="@style/Widget.DWEX.Card"
-                app:cardBackgroundColor="@color/dwex_red">
-
-                <Button
-                    android:id="@+id/btnPanic"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/btn_panic"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:textColor="#FFFFFF"
-                    android:padding="24dp"
-                    android:enabled="false"
-                    style="@style/Widget.Material3.Button.TextButton" />
-            </com.google.android.material.card.MaterialCardView>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/panic_instruction"
-                android:textSize="12sp"
-                android:textAlignment="center"
-                android:textColor="#757575"
-                android:padding="12dp"
-                android:layout_marginBottom="32dp"/> 
 
         </LinearLayout>
 

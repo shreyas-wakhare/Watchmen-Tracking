@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true">
+    android:fillViewport="true"
+    android:background="@color/watchmen_bg_primary">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -11,12 +13,34 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <com.google.android.material.card.MaterialCardView
+        <!-- Header Card / Title Banner -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp"
-            android:layout_marginBottom="16dp">
+            android:orientation="vertical"
+            android:layout_marginBottom="18dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="INCIDENT REPORT"
+                style="@style/TextAppearance.DWEX.SectionTitle" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Log security event or operational hazard"
+                android:textColor="@color/watchmen_text_secondary"
+                android:textSize="13sp"
+                android:layout_marginTop="3dp" />
+        </LinearLayout>
+
+        <!-- Card 1: Incident Classification -->
+        <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.DWEX.Card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="14dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -27,25 +51,26 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Incident Type"
-                    android:textStyle="bold"
-                    android:textSize="16sp"
-                    android:layout_marginBottom="8dp" />
+                    android:text="INCIDENT CLASSIFICATION"
+                    style="@style/TextAppearance.DWEX.SectionTitle"
+                    android:layout_marginBottom="10dp" />
 
                 <Spinner
                     android:id="@+id/incidentTypeSpinner"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="48dp"
+                    android:background="@drawable/bg_icon_container_elevated"
+                    android:paddingHorizontal="12dp"
                     android:minHeight="48dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Card 2: Incident Description -->
         <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.DWEX.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp"
-            android:layout_marginBottom="16dp">
+            android:layout_marginBottom="14dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -56,34 +81,38 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Description"
-                    android:textStyle="bold"
-                    android:textSize="16sp"
-                    android:layout_marginBottom="8dp" />
+                    android:text="INCIDENT DESCRIPTION"
+                    style="@style/TextAppearance.DWEX.SectionTitle"
+                    android:layout_marginBottom="10dp" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
+                    style="@style/Widget.DWEX.TextInputLayout"
+                    app:hintEnabled="false">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/descriptionEditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="Describe the incident in detail..."
+                        android:textColorHint="@color/watchmen_text_muted"
+                        android:textColor="@color/watchmen_text_primary"
                         android:minLines="4"
                         android:gravity="top|start"
+                        android:textSize="14sp"
+                        android:padding="12dp"
                         android:inputType="textMultiLine|textCapSentences" />
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Card 3: Photo Evidence -->
         <com.google.android.material.card.MaterialCardView
+            style="@style/Widget.DWEX.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp"
-            android:layout_marginBottom="16dp">
+            android:layout_marginBottom="20dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -94,46 +123,65 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Photo Evidence (Optional)"
-                    android:textStyle="bold"
-                    android:textSize="16sp"
+                    android:text="PHOTO EVIDENCE (OPTIONAL)"
+                    style="@style/TextAppearance.DWEX.SectionTitle"
                     android:layout_marginBottom="12dp" />
 
-                <ImageView
-                    android:id="@+id/photoImageView"
-                    android:layout_width="match_parent"
-                    android:layout_height="200dp"
-                    android:scaleType="centerCrop"
-                    android:visibility="gone"
-                    android:background="@android:color/darker_gray"
-                    android:layout_marginBottom="12dp"
-                    android:contentDescription="Incident photo" />
-
-                <Button
-                    android:id="@+id/btnCapturePhoto"
+                <!-- Captured Photo Preview -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/photoContainer"
+                    style="@style/Widget.DWEX.Card"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="📷 Capture Photo"
-                    style="@style/Widget.Material3.Button.OutlinedButton" />
+                    android:layout_marginBottom="12dp">
+
+                    <ImageView
+                        android:id="@+id/photoImageView"
+                        android:layout_width="match_parent"
+                        android:layout_height="200dp"
+                        android:scaleType="centerCrop"
+                        android:visibility="gone"
+                        android:background="@color/watchmen_bg_elevated"
+                        android:contentDescription="@string/incident_photo_content_desc" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Capture Photo Action -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCapturePhoto"
+                    style="@style/Widget.DWEX.Button.Secondary"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/btn_height_md"
+                    android:text="Capture Photo"
+                    android:textSize="14sp"
+                    app:icon="@drawable/ic_camera"
+                    app:iconGravity="textStart"
+                    app:iconTint="@color/watchmen_text_primary" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Loading Progress Bar -->
         <ProgressBar
             android:id="@+id/progressBar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:layout_gravity="center"
+            android:indeterminate="true"
+            android:indeterminateTint="@color/watchmen_primary"
             android:visibility="gone"
             android:layout_marginBottom="16dp" />
 
-        <Button
+        <!-- Submit Report Button -->
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSubmitReport"
+            style="@style/Widget.DWEX.Button"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="📤 Submit Report"
-            android:textSize="16sp"
-            android:padding="16dp"
-            style="@style/Widget.Material3.Button" />
+            android:layout_height="@dimen/btn_height_lg"
+            android:text="Submit Incident Report"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            app:icon="@drawable/ic_arrow_right"
+            app:iconGravity="textEnd"
+            android:layout_marginBottom="24dp" />
 
     </LinearLayout>
 </ScrollView>

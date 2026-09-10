@@ -10,15 +10,15 @@
 
     <string name="logo_transition_name">logoTransition</string>
     <!-- Main Activity -->
-    <string name="app_title">🛰️ Watchmen Tracker</string>
+    <string name="app_title">Watchmen Tracker</string>
     <string name="status_initializing">Initializing…</string>
     <string name="quick_actions">Quick Actions</string>
-    <string name="btn_check_in">📸 Manual Check-In</string>
-    <string name="btn_scan_checkpoint">📍 Scan Checkpoint QR</string>
-    <string name="btn_incident_report">📝 Report Incident</string>
-    <string name="emergency">Emergency</string>
-    <string name="btn_panic">🚨 PANIC (HOLD 2s)</string>
-    <string name="panic_instruction">⚠️ Hold PANIC button for 2 seconds to activate emergency alert</string>
+    <string name="btn_check_in">Manual Check-In</string>
+    <string name="btn_scan_checkpoint">Scan Checkpoint QR</string>
+    <string name="btn_incident_report">Report Incident</string>
+    <string name="emergency">Emergency Action</string>
+    <string name="btn_panic">TRIGGER PANIC ALARM</string>
+    <string name="panic_instruction">Press and hold for 2 seconds to broadcast emergency alert to command center</string>
 
     <!-- Setup Activity -->
     <string name="setup_title">Device Setup</string>
@@ -52,13 +52,13 @@
 
     <!-- Panic -->
     <string name="tap_send_sms">Tap SEND to alert supervisor</string>
-    <string name="permissions_granted_starting_service">✅ Permissions granted. Starting service…</string>
-    <string name="permissions_denied">❌ Permissions denied: %1$s</string>
-    <string name="state">State: %1$s</string>
-    <string name="checking_permissions">🔎 Checking permissions…</string>
-    <string name="waiting_for_permissions">⚠️ Waiting for permissions...</string>
-    <string name="tracking_active_service_will_not_stop">🛰️ Tracking active - SERVICE WILL NOT STOP</string>
-    <string name="service_failed_to_start">❌ Service failed to start</string>
+    <string name="permissions_granted_starting_service">Permissions granted. Initializing service…</string>
+    <string name="permissions_denied">Permissions denied: %1$s</string>
+    <string name="state">Tracking State: %1$s</string>
+    <string name="checking_permissions">Checking permissions…</string>
+    <string name="waiting_for_permissions">Waiting for required permissions</string>
+    <string name="tracking_active_service_will_not_stop">Active · Live Tracking Operational</string>
+    <string name="service_failed_to_start">Service failed to initialize</string>
 
     <!-- Incident Report -->
     <string name="incident_type">Incident Type</string>
@@ -122,7 +122,7 @@
     <string name="device_info">📱 Device Information</string>
     <string name="report_bug_title">🐞 Report a Bug</string>
     <string name="edit_setup">⚙️ Edit Setup</string>
-    <string name="close">❌ Close</string>
+    <string name="close">Close Guide</string>
 
     <!-- ===== Bug Report ===== -->
     <string name="report_bug_message">
@@ -132,8 +132,8 @@ This will help us improve the system.
 
     <string name="bug_description_hint">Describe the issue clearly...</string>
     <string name="bug_empty">Bug description cannot be empty</string>
-    <string name="bug_sent">✅ Bug report sent successfully. Thank you.</string>
-    <string name="bug_failed">❌ Failed to send bug report. Please try again later.</string>
+    <string name="bug_sent">Bug report sent successfully. Thank you.</string>
+    <string name="bug_failed">Failed to send bug report. Please try again later.</string>
     <string name="submit">Submit</string>
     <string name="cancel">Cancel</string>
 

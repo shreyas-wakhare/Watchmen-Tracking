@@ -6,75 +6,83 @@
     android:id="@+id/cl_splash_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/splash_background_gradient"
-    tools:context=".SplashScreenActivity">
+    android:background="@drawable/splash_background_gradient">
 
-    <ImageView
-        android:id="@+id/iv_app_logo"
-        android:layout_width="310dp"
-        android:layout_height="368dp"
-        android:contentDescription="@string/dwex_logo"
-        android:elevation="4dp"
-        android:padding="20dp"
-        android:scaleType="fitCenter"
-        android:src="@drawable/logo_dwex_vector"
-        android:transitionName="logoTransition"
-        app:layout_constraintBottom_toTopOf="@id/guideline_center_v"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.496"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1.0"
-        app:tint="@null" />
-
-    <TextView
-        android:id="@+id/tv_app_title"
+    <!-- Center Brand Container -->
+    <LinearLayout
+        android:id="@+id/ll_splash_brand"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/company_name"
-        android:textSize="44sp"
-        android:textColor="@color/text_title_light"
-        android:fontFamily="sans-serif-black"
-        android:letterSpacing="0.06"
-        android:alpha="0.0" 
-        tools:alpha="1.0"
-        android:layout_marginTop="32dp"
-        app:layout_constraintTop_toBottomOf="@id/guideline_center_v"
+        android:gravity="center"
+        android:orientation="vertical"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/pb_loading_indicator"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintVertical_bias="0.45">
 
+        <!-- DWEX Logo -->
+        <ImageView
+            android:id="@+id/iv_app_logo"
+            android:layout_width="220dp"
+            android:layout_height="90dp"
+            android:contentDescription="@string/dwex_logo"
+            android:scaleType="fitCenter"
+            android:src="@drawable/logo_dwex_vector"
+            android:transitionName="logoTransition"
+            app:tint="@null" />
+
+        <!-- Brand Name -->
+        <TextView
+            android:id="@+id/tv_app_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/company_name"
+            android:textSize="28sp"
+            android:textColor="@color/watchmen_text_primary"
+            android:fontFamily="sans-serif-bold"
+            android:letterSpacing="0.04" />
+
+        <!-- Command & Control Subtitle -->
+        <TextView
+            android:id="@+id/tv_app_tagline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Command &amp; Control Center"
+            android:textSize="13sp"
+            android:textColor="@color/watchmen_text_secondary"
+            android:letterSpacing="0.08"
+            android:textAllCaps="true"
+            android:fontFamily="sans-serif-medium" />
+
+    </LinearLayout>
+
+    <!-- Sleek Progress Indicator -->
     <ProgressBar
         android:id="@+id/pb_loading_indicator"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
         android:indeterminate="true"
-        android:indeterminateTint="@color/progress_accent"
-        android:layout_marginBottom="60dp"
-        android:alpha="0.0"
-        tools:alpha="1.0"
+        android:indeterminateTint="@color/watchmen_primary"
+        android:layout_marginBottom="24dp"
         app:layout_constraintBottom_toTopOf="@id/tv_app_version"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- Version & Copyright Footer -->
     <TextView
         android:id="@+id/tv_app_version"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        tools:text="v1.0.0 | © 2025"
-        android:textSize="12sp"
-        android:textColor="@color/text_white"
+        tools:text="v1.0.0 | © 2026 DWEX Security"
+        android:textSize="11sp"
+        android:textColor="@color/watchmen_text_muted"
         android:fontFamily="sans-serif"
-        android:alpha="0.4"
         android:paddingBottom="24dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
-
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/guideline_center_v"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.56" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -45,7 +45,7 @@ class IncidentReportActivity : AppCompatActivity() {
         setContentView(R.layout.activity_incident_report)
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = "📝 Incident Report"
+        supportActionBar?.title = "Incident Report"
 
         initializeViews()
         setupIncidentTypes()

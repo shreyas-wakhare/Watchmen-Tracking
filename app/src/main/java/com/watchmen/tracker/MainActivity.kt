@@ -22,6 +22,7 @@ import android.widget.TextView
 import android.widget.Toast
 import android.widget.EditText
 import android.widget.ImageButton
+import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -117,6 +118,8 @@ class MainActivity : AppCompatActivity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val state = intent?.getStringExtra("state") ?: return
             statusText.text = getString(R.string.state, state)
+            findViewById<TextView?>(R.id.tvStatusBadge)?.text = state
+            findViewById<TextView?>(R.id.tvMainServiceMode)?.text = state
         }
     }
     override fun onResume() {
@@ -136,7 +139,7 @@ class MainActivity : AppCompatActivity() {
             IntentFilter("SMS_DELIVERED"),
             RECEIVER_NOT_EXPORTED
         )
-
+        updateDashboardHeaderAndStatus()
     }
 
     override fun onPause() {
@@ -453,7 +456,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnScanCheckpoint.setOnClickListener {
-            Toast.makeText(this, "🚧 QR Scanner coming soon", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "QR Scanner coming soon", Toast.LENGTH_SHORT).show()
         }
 
         btnIncidentReport.setOnClickListener {
@@ -462,33 +465,85 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-
         btnPanic.setOnLongClickListener {
             showPanicConfirmation()
             true
         }
 
         btnPanic.setOnClickListener {
-            Toast.makeText(this, "⚠️ HOLD button for 2 seconds to trigger panic", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Hold button for 2 seconds to trigger panic", Toast.LENGTH_SHORT).show()
         }
 
-        // ✅ ADD: Settings button
         btnSettings.setOnClickListener {
             showSettingsDialog()
         }
+
+        findViewById<View?>(R.id.cardCheckIn)?.setOnClickListener { btnCheckIn.performClick() }
+        findViewById<View?>(R.id.cardScanCheckpoint)?.setOnClickListener { btnScanCheckpoint.performClick() }
+        findViewById<View?>(R.id.cardIncidentReport)?.setOnClickListener { btnIncidentReport.performClick() }
+        findViewById<View?>(R.id.cardAppGuide)?.setOnClickListener { btnAppGuide.performClick() }
+        findViewById<View?>(R.id.btnLogout)?.setOnClickListener { showLogoutConfirmation() }
+        findViewById<View?>(R.id.userProfilePill)?.setOnClickListener { showSettingsDialog() }
     }
 
-    // ✅ ADD: Settings dialog
+    private fun updateDashboardHeaderAndStatus() {
+        try {
+            val user = com.watchmen.tracker.auth.AuthManager.getUser(this)
+            if (user != null && user.fullName.isNotBlank()) {
+                findViewById<TextView?>(R.id.tvUserName)?.text = user.fullName
+                val initials = user.fullName.split(" ")
+                    .filter { it.isNotBlank() }
+                    .take(2)
+                    .map { it.first().uppercase() }
+                    .joinToString("")
+                if (initials.isNotEmpty()) {
+                    findViewById<TextView?>(R.id.tvUserAvatar)?.text = initials
+                }
+            }
+
+            val serverUrl = BackendEndpointManager.getHttpBaseUrl()
+            val serverText = findViewById<TextView?>(R.id.tvMainServerStatus)
+            if (serverText != null) {
+                if (!serverUrl.isNullOrBlank()) {
+                    val cleanUrl = serverUrl.removePrefix("http://").removePrefix("https://")
+                    serverText.text = cleanUrl
+                    serverText.setTextColor(getColor(R.color.watchmen_online))
+                } else {
+                    serverText.text = "Searching..."
+                    serverText.setTextColor(getColor(R.color.watchmen_warning))
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("Watchmen", "Error updating dashboard header: ${e.message}")
+        }
+    }
+
+    private fun showLogoutConfirmation() {
+        AlertDialog.Builder(this)
+            .setTitle("Sign Out")
+            .setMessage("Are you sure you want to sign out from Watchmen Tracker?")
+            .setPositiveButton("Sign Out") { _, _ ->
+                com.watchmen.tracker.auth.AuthManager.clearSession(this)
+                val intent = Intent(this, com.watchmen.tracker.auth.LoginActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                startActivity(intent)
+                finish()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    // Settings dialog
     private fun showSettingsDialog() {
         val options = arrayOf(
             getString(R.string.change_language),
             getString(R.string.device_info),
-            getString(R.string.guide_button_label), // 👈 ADD HERE
-            getString(R.string.report_bug_title), // 👈 ADD
+            getString(R.string.guide_button_label),
+            getString(R.string.report_bug_title),
             getString(R.string.edit_setup),
+            "Sign Out",
             getString(R.string.close)
         )
-
 
         AlertDialog.Builder(this)
             .setTitle("Settings")
@@ -496,14 +551,13 @@ class MainActivity : AppCompatActivity() {
                 when (which) {
                     0 -> showLanguageDialog()
                     1 -> showDeviceInfo()
-                    2 -> startActivity(Intent(this, AppGuideActivity::class.java)) // 👈 GUIDE
+                    2 -> startActivity(Intent(this, AppGuideActivity::class.java))
                     3 -> showBugReportDialog()
                     4 -> editSetup()
-                    5 -> {}
+                    5 -> showLogoutConfirmation()
+                    6 -> {}
                 }
-
             }
-
             .show()
     }
 
@@ -1200,15 +1254,14 @@ Time: ${SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())}
     }
 
     private fun allPermissionsGranted() {
-        statusText.text = "✅ All permissions granted"
+        statusText.text = "Permissions Verified · Initializing Service"
 
-        // ✅ ADD: Voice confirmation
+        // Voice confirmation
         ttsHelper.speak(getString(R.string.all_permissions_granted), currentLanguage, false)
 
         startTrackingService()
         scheduleHourlyPhotos()
-        retryOfflineAlerts()   // 👈 ADD HERE
-
+        retryOfflineAlerts()
     }
 
     private fun startTrackingService() {
@@ -1228,7 +1281,6 @@ Time: ${SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())}
             return
         }
 
-
         try {
             val intent = Intent(this, TrackingService::class.java)
 
@@ -1239,7 +1291,9 @@ Time: ${SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())}
             }
 
             statusText.text = getString(R.string.tracking_active_service_will_not_stop)
-            Log.i("Watchmen", "✅ TrackingService started successfully")
+            findViewById<TextView?>(R.id.tvStatusBadge)?.text = "ACTIVE"
+            findViewById<View?>(R.id.statusIndicatorDot)?.setBackgroundResource(R.drawable.bg_status_dot_online)
+            Log.i("Watchmen", "TrackingService started successfully")
 
             btnCheckIn.isEnabled = true
             btnScanCheckpoint.isEnabled = true
@@ -1247,8 +1301,10 @@ Time: ${SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())}
             btnPanic.isEnabled = true
 
         } catch (e: Exception) {
-            Log.e("Watchmen", "❌ Failed to start service: ${e.message}", e)
+            Log.e("Watchmen", "Failed to start service: ${e.message}", e)
             statusText.text = getString(R.string.service_failed_to_start)
+            findViewById<TextView?>(R.id.tvStatusBadge)?.text = "ERROR"
+            findViewById<View?>(R.id.statusIndicatorDot)?.setBackgroundResource(R.drawable.bg_status_dot_critical)
             Toast.makeText(this, "Tracking service error: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }

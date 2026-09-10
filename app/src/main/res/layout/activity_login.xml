@@ -5,95 +5,114 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:background="@color/background_secondary">
+    android:background="@color/watchmen_bg_primary">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="24dp">
 
-        <!-- Server Settings Gear Icon -->
+        <!-- Top Right Server Settings Action -->
         <ImageButton
             android:id="@+id/ibServerSettings"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_icon_container_elevated"
             android:contentDescription="Server Settings"
-            android:padding="10dp"
+            android:padding="9dp"
             android:scaleType="fitCenter"
-            android:src="@android:drawable/ic_menu_preferences"
+            android:src="@drawable/ic_settings"
+            app:tint="@color/watchmen_text_secondary"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:tint="@color/text_secondary" />
+            app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- Top Logo -->
-        <ImageView
-            android:id="@+id/ivLoginLogo"
-            android:layout_width="120dp"
-            android:layout_height="120dp"
-            android:layout_marginTop="24dp"
-            android:contentDescription="@string/dwex_logo"
-            android:src="@drawable/logo_dwex_vector"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/ibServerSettings" />
-
-        <!-- Header Title -->
-        <TextView
-            android:id="@+id/tvLoginTitle"
+        <!-- Brand Header Section -->
+        <LinearLayout
+            android:id="@+id/llAuthHeader"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
             android:layout_marginTop="16dp"
-            android:text="@string/login_title"
-            android:textColor="@color/text_primary"
-            android:textSize="26sp"
-            android:fontFamily="sans-serif-black"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/ibServerSettings"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/ivLoginLogo" />
+            app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Header Subtitle -->
-        <TextView
-            android:id="@+id/tvLoginSubtitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="@string/login_subtitle"
-            android:textColor="@color/text_secondary"
-            android:textSize="14sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvLoginTitle" />
+            <!-- DWEX Logo -->
+            <ImageView
+                android:id="@+id/ivLoginLogo"
+                android:layout_width="140dp"
+                android:layout_height="64dp"
+                android:contentDescription="@string/dwex_logo"
+                android:scaleType="fitCenter"
+                android:src="@drawable/logo_dwex_vector" />
 
-        <!-- Server Connection Status Badge -->
-        <TextView
-            android:id="@+id/tvServerStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:background="@drawable/bg_glass_card"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="6dp"
-            android:textColor="@color/dwex_blue"
-            android:textSize="12sp"
-            android:fontFamily="sans-serif-medium"
-            tools:text="📡 Connecting to Watchmen server..."
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvLoginSubtitle" />
+            <!-- Brand Badge -->
+            <TextView
+                android:id="@+id/tvBrandBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_brand_badge"
+                android:text="DWEX SECURITY"
+                android:textColor="@color/watchmen_badge_text"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.1"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="3dp" />
 
-        <!-- Form Card Container -->
+            <!-- Auth Title -->
+            <TextView
+                android:id="@+id/tvLoginTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Watchmen Tracker"
+                android:textColor="@color/watchmen_text_primary"
+                android:textSize="22sp"
+                android:fontFamily="sans-serif-bold" />
+
+            <!-- Auth Subtitle -->
+            <TextView
+                android:id="@+id/tvLoginSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Sign in to access Command &amp; Control"
+                android:textColor="@color/watchmen_text_secondary"
+                android:textSize="13sp" />
+
+            <!-- Server Connection Status Chip -->
+            <TextView
+                android:id="@+id/tvServerStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_glass_card"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
+                android:textColor="@color/watchmen_info"
+                android:textSize="11.5sp"
+                android:fontFamily="monospace"
+                tools:text="Server Connected: 192.168.1.53:8000" />
+
+        </LinearLayout>
+
+        <!-- Form Card Container (Matching .auth-card) -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardLoginForm"
             style="@style/Widget.DWEX.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="6dp"
+            app:cardCornerRadius="@dimen/radius_modal"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/watchmen_border_default"
+            app:cardBackgroundColor="@color/watchmen_bg_card"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvServerStatus">
+            app:layout_constraintTop_toBottomOf="@id/llAuthHeader">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -101,84 +120,105 @@
                 android:orientation="vertical"
                 android:padding="20dp">
 
-                <!-- Error Banner Text -->
+                <!-- Error Banner (Matching .auth-alert) -->
                 <TextView
                     android:id="@+id/tvLoginError"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
+                    android:layout_marginBottom="16dp"
                     android:background="@drawable/error_background_shape"
                     android:padding="12dp"
-                    android:textColor="@color/dwex_red_dark"
-                    android:textSize="14sp"
+                    android:textColor="@color/watchmen_critical"
+                    android:textSize="12.5sp"
+                    android:fontFamily="sans-serif-medium"
                     android:visibility="gone"
                     tools:text="Invalid email or password"
                     tools:visibility="visible" />
 
+                <!-- Email Address Label -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="EMAIL ADDRESS"
+                    style="@style/TextAppearance.DWEX.SectionTitle"
+                    android:layout_marginBottom="6dp" />
+
                 <!-- Email Input Layout -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilEmail"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    style="@style/Widget.DWEX.TextInputLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
-                    android:hint="@string/email_hint"
-                    app:boxCornerRadiusBottomEnd="12dp"
-                    app:boxCornerRadiusBottomStart="12dp"
-                    app:boxCornerRadiusTopEnd="12dp"
-                    app:boxCornerRadiusTopStart="12dp">
+                    app:hintEnabled="false">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etEmail"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        android:layout_height="48dp"
+                        android:hint="user@example.com"
+                        android:textColorHint="@color/watchmen_text_muted"
                         android:inputType="textEmailAddress"
                         android:maxLines="1"
-                        android:textSize="16sp" />
+                        android:textColor="@color/watchmen_text_primary"
+                        android:textSize="14sp"
+                        android:padding="12dp" />
                 </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Password Label -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PASSWORD"
+                    style="@style/TextAppearance.DWEX.SectionTitle"
+                    android:layout_marginBottom="6dp" />
 
                 <!-- Password Input Layout -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilPassword"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    style="@style/Widget.DWEX.TextInputLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="24dp"
-                    android:hint="@string/password_hint"
-                    app:boxCornerRadiusBottomEnd="12dp"
-                    app:boxCornerRadiusBottomStart="12dp"
-                    app:boxCornerRadiusTopEnd="12dp"
-                    app:boxCornerRadiusTopStart="12dp"
-                    app:endIconMode="password_toggle">
+                    android:layout_marginBottom="22dp"
+                    app:hintEnabled="false"
+                    app:endIconMode="password_toggle"
+                    app:endIconTint="@color/watchmen_text_muted">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etPassword"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
+                        android:layout_height="48dp"
+                        android:hint="••••••••"
+                        android:textColorHint="@color/watchmen_text_muted"
                         android:inputType="textPassword"
                         android:maxLines="1"
-                        android:textSize="16sp" />
+                        android:textColor="@color/watchmen_text_primary"
+                        android:textSize="14sp"
+                        android:padding="12dp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Login Action Button -->
+                <!-- Sign In Action Button -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnLogin"
                     style="@style/Widget.DWEX.Button"
                     android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:text="@string/btn_login"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:layout_height="@dimen/btn_height_lg"
+                    android:text="Sign In"
+                    android:textSize="14.5sp"
+                    android:textStyle="bold"
+                    app:icon="@drawable/ic_arrow_right"
+                    app:iconGravity="textEnd"
+                    app:iconPadding="8dp" />
 
                 <!-- Loading Indicator -->
                 <ProgressBar
                     android:id="@+id/pbLoginLoading"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
                     android:layout_gravity="center_horizontal"
                     android:layout_marginTop="12dp"
                     android:indeterminate="true"
-                    android:indeterminateTint="@color/dwex_blue"
+                    android:indeterminateTint="@color/watchmen_primary"
                     android:visibility="gone"
                     tools:visibility="visible" />
 
@@ -190,12 +230,12 @@
             android:id="@+id/tvGoToSignup"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="20dp"
             android:layout_marginBottom="16dp"
-            android:padding="12dp"
+            android:padding="10dp"
             android:text="@string/no_account_prompt"
-            android:textColor="@color/dwex_blue"
-            android:textSize="15sp"
+            android:textColor="@color/watchmen_primary"
+            android:textSize="13.5sp"
             android:fontFamily="sans-serif-medium"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
