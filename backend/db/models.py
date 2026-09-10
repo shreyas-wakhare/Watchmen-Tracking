@@ -9,6 +9,12 @@ from sqlalchemy import (
     ForeignKey,
     JSON,
     Text,
+    Date,
+    Time,
+    UniqueConstraint,
+    CheckConstraint,
+    Index,
+    text,
 )
 from sqlalchemy.orm import relationship
 
@@ -230,6 +236,8 @@ class User(Base):
     last_login_at = Column(DateTime(timezone=True), nullable=True)
 
     refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
+    shift_schedules = relationship("UserShiftSchedule", back_populates="user", cascade="all, delete-orphan")
+    attendance_records = relationship("AttendanceRecord", back_populates="user")
 
 
 class RefreshToken(Base):
@@ -243,4 +251,94 @@ class RefreshToken(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now)
 
     user = relationship("User", back_populates="refresh_tokens")
+
+
+# -------------------- ATTENDANCE & SHIFT MODELS (PHASE 3) --------------------
+
+class UserShiftSchedule(Base):
+    __tablename__ = "user_shift_schedules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    shift_name = Column(String(50), nullable=False, default="Default Shift", server_default=text("'Default Shift'"))
+    start_time = Column(Time, nullable=False)
+    end_time = Column(Time, nullable=False)
+    timezone = Column(String(50), nullable=False, default="Asia/Dubai", server_default=text("'Asia/Dubai'"))
+    days_of_week = Column(String(30), nullable=False, default="1,2,3,4,5,6,7", server_default=text("'1,2,3,4,5,6,7'"))
+    is_active = Column(Boolean, nullable=False, default=True, index=True, server_default=text("true"))
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, server_default=text("CURRENT_TIMESTAMP"))
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now, server_default=text("CURRENT_TIMESTAMP"))
+
+    user = relationship("User", back_populates="shift_schedules")
+
+    __table_args__ = (
+        Index(
+            "uq_user_active_schedule",
+            "user_id",
+            unique=True,
+            postgresql_where=text("is_active = true"),
+        ),
+    )
+
+
+class AttendanceRecord(Base):
+    __tablename__ = "attendance_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
+    work_date = Column(Date, nullable=False, index=True)
+    scheduled_start_time = Column(Time, nullable=False)
+    scheduled_end_time = Column(Time, nullable=False)
+    timezone = Column(String(50), nullable=False, default="Asia/Dubai", server_default=text("'Asia/Dubai'"))
+    clock_in_at = Column(DateTime(timezone=True), nullable=False, index=True)
+    clock_out_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    clock_in_request_id = Column(String(64), nullable=True)
+    clock_out_request_id = Column(String(64), nullable=True)
+    clock_in_device_id = Column(String(100), nullable=True, index=True)
+    clock_out_device_id = Column(String(100), nullable=True)
+    clock_in_lat = Column(Float, nullable=True)
+    clock_in_lon = Column(Float, nullable=True)
+    clock_out_lat = Column(Float, nullable=True)
+    clock_out_lon = Column(Float, nullable=True)
+    total_worked_minutes = Column(Integer, nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, server_default=text("CURRENT_TIMESTAMP"))
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now, server_default=text("CURRENT_TIMESTAMP"))
+
+    user = relationship("User", back_populates="attendance_records")
+
+    __table_args__ = (
+        CheckConstraint(
+            "clock_out_at IS NULL OR clock_out_at >= clock_in_at",
+            name="ck_attendance_clock_out_after_in",
+        ),
+        CheckConstraint(
+            "total_worked_minutes IS NULL OR total_worked_minutes >= 0",
+            name="ck_attendance_worked_minutes_positive",
+        ),
+        UniqueConstraint("user_id", "work_date", name="uq_attendance_user_work_date"),
+        Index(
+            "uq_user_single_active_shift",
+            "user_id",
+            unique=True,
+            postgresql_where=text("clock_out_at IS NULL"),
+        ),
+        Index(
+            "uq_attendance_clock_in_request_id",
+            "clock_in_request_id",
+            unique=True,
+            postgresql_where=text("clock_in_request_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_attendance_clock_out_request_id",
+            "clock_out_request_id",
+            unique=True,
+            postgresql_where=text("clock_out_request_id IS NOT NULL"),
+        ),
+        Index(
+            "ix_attendance_recent_activity",
+            text("work_date DESC"),
+            text("clock_in_at DESC"),
+        ),
+    )
 

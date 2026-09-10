@@ -374,6 +374,259 @@
             </com.google.android.material.card.MaterialCardView>
 
             <!-- ========================================================
+                 1B. ATTENDANCE & TODAY'S SHIFT CARD
+                 ======================================================== -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardAttendance"
+                style="@style/Widget.DWEX.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/watchmen_border_default"
+                app:cardBackgroundColor="@color/watchmen_bg_card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Card Header (44dp) -->
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="44dp"
+                        android:paddingHorizontal="16dp"
+                        android:background="@color/watchmen_bg_card">
+
+                        <!-- Left: Status Dot + Section Title -->
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent"
+                            app:layout_constraintBottom_toBottomOf="parent">
+
+                            <View
+                                android:id="@+id/attendanceStatusDot"
+                                android:layout_width="8dp"
+                                android:layout_height="8dp"
+                                android:background="@drawable/bg_status_dot_warning" />
+
+                            <TextView
+                                android:id="@+id/tvAttendanceSectionTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:text="TODAY'S SHIFT"
+                                style="@style/TextAppearance.DWEX.SectionTitle" />
+                        </LinearLayout>
+
+                        <!-- Right: Attendance Status Badge -->
+                        <TextView
+                            android:id="@+id/tvAttendanceBadge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_status_badge_warning"
+                            android:text="NOT CLOCKED IN"
+                            android:textColor="@color/watchmen_warning"
+                            android:textSize="10.5sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.06"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintTop_toTopOf="parent"
+                            app:layout_constraintBottom_toBottomOf="parent" />
+
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+
+                    <!-- Divider -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/watchmen_border_default" />
+
+                    <!-- Card Body -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <!-- Scheduled Shift Information -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="12dp">
+
+                            <ImageView
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:src="@drawable/ic_clock"
+                                app:tint="@color/watchmen_text_muted"
+                                android:contentDescription="@null" />
+
+                            <TextView
+                                android:id="@+id/tvScheduledShiftTime"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="8dp"
+                                android:text="Scheduled: 07:00 AM — 07:00 PM"
+                                android:textColor="@color/watchmen_text_secondary"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+
+                        <!-- State: CLOCKED_IN Container (Timer + Clock-In Time) -->
+                        <LinearLayout
+                            android:id="@+id/llAttendanceActiveContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:background="@drawable/bg_icon_container_elevated"
+                            android:padding="14dp"
+                            android:layout_marginBottom="14dp"
+                            android:visibility="gone">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:layout_marginBottom="6dp">
+
+                                <TextView
+                                    android:id="@+id/tvActualClockInTime"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="Clocked in at 07:03 AM"
+                                    android:textColor="@color/watchmen_text_secondary"
+                                    android:textSize="12.5sp" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="DUTY ACTIVE"
+                                    android:textColor="@color/watchmen_online"
+                                    android:textSize="10.5sp"
+                                    android:textStyle="bold"
+                                    android:letterSpacing="0.06" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tvWorkingTimer"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="00:00:00"
+                                android:textColor="@color/watchmen_text_primary"
+                                android:textSize="32sp"
+                                android:fontFamily="sans-serif-medium"
+                                android:textStyle="bold"
+                                android:letterSpacing="0.04" />
+                        </LinearLayout>
+
+                        <!-- State: CLOCKED_OUT Container (Completed Shift Summary) -->
+                        <LinearLayout
+                            android:id="@+id/llAttendanceCompletedContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:background="@drawable/bg_icon_container_elevated"
+                            android:padding="14dp"
+                            android:layout_marginBottom="14dp"
+                            android:visibility="gone">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="TODAY'S SHIFT COMPLETED"
+                                android:textColor="@color/watchmen_online"
+                                android:textSize="11sp"
+                                android:textStyle="bold"
+                                android:letterSpacing="0.06"
+                                android:layout_marginBottom="4dp" />
+
+                            <TextView
+                                android:id="@+id/tvWorkedSummary"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Worked: 11h 55m (07:03 AM – 06:58 PM)"
+                                android:textColor="@color/watchmen_text_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <!-- State: PENDING_RESOLUTION Container -->
+                        <LinearLayout
+                            android:id="@+id/llAttendanceResolutionContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:background="@drawable/bg_emergency_card"
+                            android:padding="14dp"
+                            android:layout_marginBottom="14dp"
+                            android:visibility="gone">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="SHIFT REQUIRES RESOLUTION"
+                                android:textColor="@color/watchmen_critical"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:letterSpacing="0.06"
+                                android:layout_marginBottom="4dp" />
+
+                            <TextView
+                                android:id="@+id/tvResolutionMessage"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Previous attendance session was left open. Please resolve forgotten clock-out with supervisor."
+                                android:textColor="@color/watchmen_text_primary"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+
+                        <!-- Error Message Banner -->
+                        <TextView
+                            android:id="@+id/tvAttendanceError"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/watchmen_critical"
+                            android:textSize="12sp"
+                            android:layout_marginBottom="10dp"
+                            android:visibility="gone" />
+
+                        <!-- Primary Action Button (CLOCK IN / CLOCK OUT) -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnAttendanceAction"
+                            style="@style/Widget.DWEX.Button"
+                            android:layout_width="match_parent"
+                            android:layout_height="@dimen/btn_height_lg"
+                            android:text="CLOCK IN"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            app:icon="@drawable/ic_check_in"
+                            app:iconGravity="textEnd"
+                            app:iconPadding="8dp" />
+
+                        <!-- Loading Indicator -->
+                        <ProgressBar
+                            android:id="@+id/pbAttendanceLoading"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="4dp"
+                            android:indeterminate="true"
+                            android:layout_marginTop="8dp"
+                            android:visibility="gone" />
+
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ========================================================
                  2. QUICK ACTIONS SECTION
                  ======================================================== -->
             <TextView

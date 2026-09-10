@@ -122,6 +122,7 @@ window.addEventListener('load', async function () {
     await loadIncidents();
     await loadPhotos();
     await updateAlertBadge();
+    await loadAttendanceData();
 
     // Explicitly enforce Fleet Context (All Devices) on initial load
     selectDevice(null);
@@ -292,6 +293,7 @@ function initWebSocket() {
         if (statusText) statusText.textContent = 'Connected';
         reconnectAttempts = 0;
         clearTimeout(reconnectTimer);
+        refreshAttendanceAfterReconnect();
     };
 
     ws.onmessage = (event) => {
@@ -446,6 +448,10 @@ function handleWebSocketMessage(data) {
     if (data.type === 'incident') {
         showNotification(`📝 Incident ${data.incident_id} reported`, 'warning');
         loadIncidents();
+    }
+
+    if (data.type === 'ATTENDANCE_EVENT') {
+        handleAttendanceWebSocketEvent(data);
     }
 
     if (data.type === 'checkpoint') {
@@ -1913,6 +1919,9 @@ function switchView(viewName) {
     else if (viewName === 'bugs') {
         loadBugReports();
     }
+    else if (viewName === 'attendance') {
+        loadAttendanceData();
+    }
 
     console.log(`Switched to ${viewName} view`);
 }
@@ -3193,6 +3202,9 @@ function selectDevice(deviceId) {
     updateKpiCards();
     updateScopedActivity();
     updateScopedAlerts();
+    renderTodayAttendanceUi();
+    attendanceCurrentPage = 0;
+    renderAttendanceHistoryUi();
 }
 
 function handleOverviewPanelAction() {
@@ -4315,3 +4327,727 @@ window.deviceData = deviceData;
 window.connectedDevices = connectedDevices;
 window.cachedAlerts = cachedAlerts;
 window.fleetActivityLog = fleetActivityLog;
+
+// ============================================================
+// 🕒 WATCHMAN ATTENDANCE & SHIFT MANAGEMENT MODULE
+// ============================================================
+
+let attendanceTodayData = null;
+let attendanceScheduleData = null;
+let attendanceAllHistoryRecords = [];
+let attendanceCurrentPage = 0;
+const attendancePageSize = 10;
+let attendanceStatusFilter = 'ALL';
+let attendanceStartDateFilter = null;
+let attendanceEndDateFilter = null;
+
+let attendanceTimerInterval = null;
+let attendanceClockInEpochMs = null;
+let attendanceServerOffsetMs = 0;
+let attendanceSiteClockInterval = null;
+
+function getAttendanceAuthHeaders() {
+    const token = localStorage.getItem("watchmen_access_token");
+    const headers = { "Content-Type": "application/json" };
+    if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+    }
+    return headers;
+}
+
+function formatAttendanceTime(isoString, tz = "Asia/Dubai") {
+    if (!isoString) return "--";
+    try {
+        const d = new Date(isoString);
+        return new Intl.DateTimeFormat('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true,
+            timeZone: tz
+        }).format(d);
+    } catch (e) {
+        return isoString;
+    }
+}
+
+function formatAttendanceDate(isoString, tz = "Asia/Dubai") {
+    if (!isoString) return "--";
+    try {
+        const d = new Date(isoString);
+        return new Intl.DateTimeFormat('en-CA', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            timeZone: tz
+        }).format(d);
+    } catch (e) {
+        return isoString;
+    }
+}
+
+function formatWorkedMinutesString(minutes) {
+    if (minutes === null || minutes === undefined) return "--";
+    const hrs = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hrs > 0) {
+        return `${hrs}h ${mins}m`;
+    }
+    return `${mins}m`;
+}
+
+function formatTimerMs(ms) {
+    if (ms <= 0) return "00:00";
+    const totalSecs = Math.floor(ms / 1000);
+    const hrs = Math.floor(totalSecs / 3600);
+    const mins = Math.floor((totalSecs % 3600) / 60);
+    const secs = totalSecs % 60;
+    const pad = (n) => (n < 10 ? '0' + n : n);
+    if (hrs > 0) {
+        return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+    }
+    return `${pad(mins)}:${pad(secs)}`;
+}
+
+function startAttendanceTimer(clockInIso, serverTimeHeader) {
+    stopAttendanceTimer();
+    if (!clockInIso) return;
+
+    try {
+        const clockInDate = new Date(clockInIso);
+        attendanceClockInEpochMs = clockInDate.getTime();
+
+        if (serverTimeHeader) {
+            const serverDate = new Date(serverTimeHeader);
+            if (!isNaN(serverDate.getTime())) {
+                attendanceServerOffsetMs = serverDate.getTime() - performance.now();
+            } else {
+                attendanceServerOffsetMs = Date.now() - performance.now();
+            }
+        } else {
+            attendanceServerOffsetMs = Date.now() - performance.now();
+        }
+
+        updateAttendanceTimerDisplay();
+
+        attendanceTimerInterval = setInterval(() => {
+            updateAttendanceTimerDisplay();
+        }, 1000);
+    } catch (err) {
+        console.warn("Could not start attendance timer:", err);
+    }
+}
+
+function stopAttendanceTimer() {
+    if (attendanceTimerInterval) {
+        clearInterval(attendanceTimerInterval);
+        attendanceTimerInterval = null;
+    }
+    attendanceClockInEpochMs = null;
+}
+
+function updateAttendanceTimerDisplay() {
+    if (!attendanceClockInEpochMs) return;
+    const currentServerEpoch = performance.now() + attendanceServerOffsetMs;
+    const elapsedMs = Math.max(0, currentServerEpoch - attendanceClockInEpochMs);
+    const formatted = formatTimerMs(elapsedMs);
+
+    const ovDur = document.getElementById("ovAttendanceDuration");
+    if (ovDur) ovDur.textContent = formatted;
+
+    const kpiDur = document.getElementById("kpiAttendanceDuration");
+    if (kpiDur) kpiDur.textContent = formatted;
+
+    const todayDur = document.getElementById("todayDurationValue");
+    if (todayDur) todayDur.textContent = formatted;
+}
+
+function startSiteClock(tz = "Asia/Dubai") {
+    if (attendanceSiteClockInterval) clearInterval(attendanceSiteClockInterval);
+
+    function tick() {
+        const elem = document.getElementById("kpiAttendanceSiteTime");
+        if (!elem) return;
+        try {
+            const now = new Date();
+            elem.textContent = new Intl.DateTimeFormat('en-US', {
+                timeZone: tz,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            }).format(now);
+        } catch (e) {
+            elem.textContent = "--:--:--";
+        }
+    }
+    tick();
+    attendanceSiteClockInterval = setInterval(tick, 1000);
+}
+
+async function fetchAttendanceToday() {
+    try {
+        const res = await fetch(`${BACKEND}/attendance/team/today`, {
+            headers: getAttendanceAuthHeaders()
+        });
+        if (res.status === 401) {
+            console.warn("Attendance API: 401 Unauthorized");
+            return null;
+        }
+        if (!res.ok) {
+            console.warn(`Attendance /team/today returned status ${res.status}`);
+            return null;
+        }
+        const serverDateHeader = res.headers.get("Date");
+        const data = await res.json();
+        return { data, serverTime: serverDateHeader };
+    } catch (err) {
+        console.error("Error fetching today's team attendance:", err);
+        return null;
+    }
+}
+
+async function fetchAttendanceSchedule() {
+    try {
+        const res = await fetch(`${BACKEND}/attendance/schedule`, {
+            headers: getAttendanceAuthHeaders()
+        });
+        if (!res.ok) return null;
+        return await res.json();
+    } catch (err) {
+        console.error("Error fetching attendance schedule:", err);
+        return null;
+    }
+}
+
+async function fetchAllAttendanceHistory(startDate = null, endDate = null) {
+    let allItems = [];
+    let offset = 0;
+    const limit = 100;
+    let total = 0;
+
+    try {
+        while (true) {
+            let url = `${BACKEND}/attendance/team/history?limit=${limit}&offset=${offset}`;
+            if (startDate) url += `&start_date=${startDate}`;
+            if (endDate) url += `&end_date=${endDate}`;
+
+            const res = await fetch(url, {
+                headers: getAttendanceAuthHeaders()
+            });
+            if (!res.ok) break;
+            const data = await res.json();
+            const items = data.items || [];
+            total = data.total || 0;
+            allItems.push(...items);
+            offset += items.length;
+
+            if (items.length === 0 || allItems.length >= total || offset >= total) {
+                break;
+            }
+        }
+        return { total: allItems.length, items: allItems };
+    } catch (err) {
+        console.error("Error fetching team attendance history:", err);
+        return { total: allItems.length, items: allItems };
+    }
+}
+
+async function loadAttendanceHistory() {
+    const tbody = document.getElementById("attendanceHistoryTableBody");
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 32px;">
+                    <i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i> Loading attendance records...
+                </td>
+            </tr>
+        `;
+    }
+
+    const prevBtn = document.getElementById("attPrevPageBtn");
+    const nextBtn = document.getElementById("attNextPageBtn");
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
+
+    const hist = await fetchAllAttendanceHistory(attendanceStartDateFilter, attendanceEndDateFilter);
+    attendanceAllHistoryRecords = hist.items || [];
+    attendanceCurrentPage = 0;
+    renderAttendanceHistoryUi();
+}
+
+async function loadAttendanceData() {
+    try {
+        const [todayResult, sched, hist] = await Promise.all([
+            fetchAttendanceToday(),
+            fetchAttendanceSchedule(),
+            fetchAllAttendanceHistory(attendanceStartDateFilter, attendanceEndDateFilter)
+        ]);
+
+        if (todayResult && todayResult.data) {
+            attendanceTodayData = todayResult.data;
+            renderTodayAttendanceUi(todayResult.serverTime);
+        } else {
+            renderTodayAttendanceEmptyUi();
+        }
+
+        if (sched) {
+            attendanceScheduleData = sched;
+            renderAttendanceScheduleUi(sched);
+            startSiteClock(sched.timezone || "Asia/Dubai");
+        } else {
+            startSiteClock("Asia/Dubai");
+        }
+
+        if (hist) {
+            attendanceAllHistoryRecords = hist.items || [];
+            renderAttendanceHistoryUi();
+        }
+    } catch (err) {
+        console.error("Failed to load full attendance data:", err);
+    }
+}
+
+function renderTodayAttendanceEmptyUi() {
+    stopAttendanceTimer();
+
+    const ovBadge = document.getElementById("ovAttendanceBadge");
+    if (ovBadge) {
+        ovBadge.className = "status-badge badge-status-not-started";
+        ovBadge.textContent = "OFF DUTY";
+    }
+    const ovDur = document.getElementById("ovAttendanceDuration");
+    if (ovDur) ovDur.textContent = "--:--";
+    const ovIn = document.getElementById("ovAttendanceClockIn");
+    if (ovIn) ovIn.textContent = "--";
+    const ovOut = document.getElementById("ovAttendanceClockOut");
+    if (ovOut) ovOut.textContent = "--";
+
+    const kpiStatus = document.getElementById("kpiAttendanceStatus");
+    if (kpiStatus) kpiStatus.textContent = "OFF DUTY";
+    const kpiDesc = document.getElementById("kpiAttendanceStatusDesc");
+    if (kpiDesc) kpiDesc.textContent = "No shift started today";
+    const kpiDur = document.getElementById("kpiAttendanceDuration");
+    if (kpiDur) kpiDur.textContent = "--:--";
+
+    const todayBadge = document.getElementById("todayStatusBadge");
+    if (todayBadge) {
+        todayBadge.className = "status-badge badge-status-not-started";
+        todayBadge.textContent = "NOT STARTED";
+    }
+}
+
+function renderTodayAttendanceUi(serverTime) {
+    if (!attendanceTodayData) {
+        renderTodayAttendanceEmptyUi();
+        return;
+    }
+
+    const items = (attendanceTodayData && attendanceTodayData.items) ? attendanceTodayData.items : [];
+
+    let pool = items;
+    if (currentDeviceId) {
+        pool = items.filter(r => r.clock_in_device_id === currentDeviceId || r.clock_out_device_id === currentDeviceId);
+    }
+
+    let record = pool.find(r => r.status === "CLOCKED_IN")
+        || pool.find(r => r.status === "PENDING_RESOLUTION")
+        || pool.find(r => r.status === "CLOCKED_OUT")
+        || pool[0]
+        || null;
+
+    if (!record) {
+        renderTodayAttendanceEmptyUi();
+        return;
+    }
+
+    const state = record.status || "NOT_STARTED";
+    const tz = record.timezone || "Asia/Dubai";
+
+    const shiftName = record.shift_name || "Default Shift";
+    const shiftTimes = (record.scheduled_start_time && record.scheduled_end_time)
+        ? `${record.scheduled_start_time.substring(0, 5)} – ${record.scheduled_end_time.substring(0, 5)}`
+        : "07:00 – 19:00";
+
+    const ovShiftName = document.getElementById("ovAttendanceShiftName");
+    if (ovShiftName) ovShiftName.textContent = shiftName;
+    const ovShiftTimes = document.getElementById("ovAttendanceShiftTimes");
+    if (ovShiftTimes) ovShiftTimes.textContent = shiftTimes;
+
+    const kpiShiftName = document.getElementById("kpiAttendanceShiftName");
+    if (kpiShiftName) kpiShiftName.textContent = shiftName;
+    const kpiShiftTimes = document.getElementById("kpiAttendanceShiftTimes");
+    if (kpiShiftTimes) kpiShiftTimes.textContent = shiftTimes;
+
+    const todayDateElem = document.getElementById("todayWorkDate");
+    if (todayDateElem) todayDateElem.textContent = record.work_date ? `Work Date: ${record.work_date}` : "--";
+
+    const todayWindowElem = document.getElementById("todayScheduledWindow");
+    if (todayWindowElem) todayWindowElem.textContent = `${shiftTimes} (${tz})`;
+
+    const watchmanElem = document.getElementById("todayWatchmanName");
+    if (watchmanElem) watchmanElem.textContent = record.user_name || "Watchman";
+
+    const deviceElem = document.getElementById("todayDeviceId");
+    if (deviceElem) {
+        const devId = record.clock_in_device_id || record.clock_out_device_id || currentDeviceId || "Pending Clock-In";
+        deviceElem.textContent = devId;
+    }
+
+    const coordsElem = document.getElementById("todayLocationCoords");
+    if (coordsElem) {
+        if (record.clock_in_lat !== null && record.clock_in_lon !== null && record.clock_in_lat !== undefined && record.clock_in_lon !== undefined) {
+            coordsElem.textContent = `${record.clock_in_lat.toFixed(6)}, ${record.clock_in_lon.toFixed(6)}`;
+        } else {
+            coordsElem.textContent = "No GPS recorded";
+        }
+    }
+
+    const ovWarning = document.getElementById("ovAttendanceWarning");
+    const todayWarning = document.getElementById("attendancePendingResolutionBanner");
+    const hasUnresolved = state === "PENDING_RESOLUTION";
+    if (ovWarning) ovWarning.style.display = hasUnresolved ? "flex" : "none";
+    if (todayWarning) todayWarning.style.display = hasUnresolved ? "flex" : "none";
+
+    const ovBadge = document.getElementById("ovAttendanceBadge");
+    const todayBadge = document.getElementById("todayStatusBadge");
+    const kpiStatus = document.getElementById("kpiAttendanceStatus");
+    const kpiDot = document.getElementById("kpiAttendanceDot");
+    const kpiDesc = document.getElementById("kpiAttendanceStatusDesc");
+    const kpiIconWrap = document.getElementById("kpiAttendanceIconWrap");
+
+    const inTimeFormatted = record.clock_in_at ? formatAttendanceTime(record.clock_in_at, tz) : "--";
+    const outTimeFormatted = record.clock_out_at ? formatAttendanceTime(record.clock_out_at, tz) : "--";
+
+    const ovIn = document.getElementById("ovAttendanceClockIn");
+    if (ovIn) ovIn.textContent = inTimeFormatted;
+    const ovOut = document.getElementById("ovAttendanceClockOut");
+    if (ovOut) ovOut.textContent = outTimeFormatted;
+
+    const todayIn = document.getElementById("todayClockInTime");
+    if (todayIn) todayIn.textContent = inTimeFormatted;
+    const todayOut = document.getElementById("todayClockOutTime");
+    if (todayOut) todayOut.textContent = outTimeFormatted;
+
+    if (state === "CLOCKED_IN") {
+        if (ovBadge) {
+            ovBadge.className = "status-badge badge-status-clocked-in";
+            ovBadge.innerHTML = '<i class="fas fa-circle" style="font-size: 6px;"></i> ON DUTY';
+        }
+        if (todayBadge) {
+            todayBadge.className = "status-badge badge-status-clocked-in";
+            todayBadge.innerHTML = '<i class="fas fa-circle" style="font-size: 6px;"></i> CLOCKED IN';
+        }
+        if (kpiStatus) kpiStatus.textContent = "ON DUTY";
+        if (kpiDot) kpiDot.style.background = "var(--color-online)";
+        if (kpiDesc) kpiDesc.textContent = `${record.user_name || 'Watchman'} clocked in at ${inTimeFormatted}`;
+        if (kpiIconWrap) {
+            kpiIconWrap.style.backgroundColor = "rgba(34, 197, 94, 0.12)";
+            kpiIconWrap.style.color = "var(--color-online)";
+        }
+
+        const kpiDurDesc = document.getElementById("kpiAttendanceDurationDesc");
+        if (kpiDurDesc) kpiDurDesc.textContent = `Live running duty ticker (${record.user_name || 'Watchman'})`;
+
+        startAttendanceTimer(record.clock_in_at, serverTime);
+
+    } else if (state === "CLOCKED_OUT") {
+        stopAttendanceTimer();
+
+        if (ovBadge) {
+            ovBadge.className = "status-badge badge-status-clocked-out";
+            ovBadge.textContent = "COMPLETED";
+        }
+        if (todayBadge) {
+            todayBadge.className = "status-badge badge-status-clocked-out";
+            todayBadge.textContent = "CLOCKED OUT";
+        }
+        if (kpiStatus) kpiStatus.textContent = "COMPLETED";
+        if (kpiDot) kpiDot.style.background = "#94A3B8";
+        if (kpiDesc) kpiDesc.textContent = `${record.user_name || 'Watchman'} shift ended at ${outTimeFormatted}`;
+        if (kpiIconWrap) {
+            kpiIconWrap.style.backgroundColor = "rgba(100, 116, 139, 0.12)";
+            kpiIconWrap.style.color = "#94A3B8";
+        }
+
+        const workedStr = formatWorkedMinutesString(record.total_worked_minutes);
+        const ovDur = document.getElementById("ovAttendanceDuration");
+        if (ovDur) ovDur.textContent = workedStr;
+        const kpiDur = document.getElementById("kpiAttendanceDuration");
+        if (kpiDur) kpiDur.textContent = workedStr;
+        const todayDur = document.getElementById("todayDurationValue");
+        if (todayDur) todayDur.textContent = workedStr;
+        const kpiDurDesc = document.getElementById("kpiAttendanceDurationDesc");
+        if (kpiDurDesc) kpiDurDesc.textContent = "Total shift duration";
+
+    } else if (state === "PENDING_RESOLUTION") {
+        stopAttendanceTimer();
+
+        if (ovBadge) {
+            ovBadge.className = "status-badge badge-status-pending-res";
+            ovBadge.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ACTION REQ';
+        }
+        if (todayBadge) {
+            todayBadge.className = "status-badge badge-status-pending-res";
+            todayBadge.textContent = "PENDING RESOLUTION";
+        }
+        if (kpiStatus) kpiStatus.textContent = "UNRESOLVED";
+        if (kpiDot) kpiDot.style.background = "var(--color-warning)";
+        if (kpiDesc) kpiDesc.textContent = "Prior open shift requires review";
+        if (kpiIconWrap) {
+            kpiIconWrap.style.backgroundColor = "rgba(245, 158, 11, 0.12)";
+            kpiIconWrap.style.color = "var(--color-warning)";
+        }
+
+        const ovDur = document.getElementById("ovAttendanceDuration");
+        if (ovDur) ovDur.textContent = "--:--";
+        const kpiDur = document.getElementById("kpiAttendanceDuration");
+        if (kpiDur) kpiDur.textContent = "--:--";
+        const todayDur = document.getElementById("todayDurationValue");
+        if (todayDur) todayDur.textContent = "--:--";
+
+    } else {
+        // NOT_STARTED
+        stopAttendanceTimer();
+
+        if (ovBadge) {
+            ovBadge.className = "status-badge badge-status-not-started";
+            ovBadge.textContent = "OFF DUTY";
+        }
+        if (todayBadge) {
+            todayBadge.className = "status-badge badge-status-not-started";
+            todayBadge.textContent = "NOT STARTED";
+        }
+        if (kpiStatus) kpiStatus.textContent = "OFF DUTY";
+        if (kpiDot) kpiDot.style.background = "var(--color-inactive)";
+        if (kpiDesc) kpiDesc.textContent = "No watchmen clocked in today";
+        if (kpiIconWrap) {
+            kpiIconWrap.style.backgroundColor = "rgba(102, 117, 133, 0.12)";
+            kpiIconWrap.style.color = "var(--color-inactive)";
+        }
+
+        const ovDur = document.getElementById("ovAttendanceDuration");
+        if (ovDur) ovDur.textContent = "--:--";
+        const kpiDur = document.getElementById("kpiAttendanceDuration");
+        if (kpiDur) kpiDur.textContent = "--:--";
+        const todayDur = document.getElementById("todayDurationValue");
+        if (todayDur) todayDur.textContent = "--:--";
+    }
+}
+
+function renderAttendanceScheduleUi(schedule) {
+    if (!schedule) return;
+
+    const nameElem = document.getElementById("schedShiftName");
+    if (nameElem) nameElem.textContent = schedule.shift_name || "Default Shift";
+
+    const timingElem = document.getElementById("schedShiftTiming");
+    if (timingElem && schedule.start_time && schedule.end_time) {
+        timingElem.textContent = `${schedule.start_time} – ${schedule.end_time}`;
+    }
+
+    const tzElem = document.getElementById("schedTimezone");
+    if (tzElem) tzElem.textContent = schedule.timezone || "Asia/Dubai";
+
+    const daysMap = { "1": "Mon", "2": "Tue", "3": "Wed", "4": "Thu", "5": "Fri", "6": "Sat", "7": "Sun" };
+    const daysStr = (schedule.days_of_week || "1,2,3,4,5,6,7")
+        .split(",")
+        .map(d => daysMap[d.trim()] || d.trim())
+        .join(", ");
+
+    const daysElem = document.getElementById("schedWorkingDays");
+    if (daysElem) daysElem.textContent = daysStr;
+
+    const kpiTzName = document.getElementById("kpiAttendanceTzName");
+    if (kpiTzName) kpiTzName.textContent = schedule.timezone || "Asia/Dubai";
+}
+
+function getFilteredAttendanceRecords() {
+    let items = attendanceAllHistoryRecords || [];
+
+    // Filter by status across the ENTIRE dataset
+    if (attendanceStatusFilter !== "ALL") {
+        items = items.filter(r => r.status === attendanceStatusFilter);
+    }
+
+    // Filter by device across the ENTIRE dataset
+    if (currentDeviceId) {
+        items = items.filter(r => r.clock_in_device_id === currentDeviceId || r.clock_out_device_id === currentDeviceId);
+    }
+
+    return items;
+}
+
+function renderAttendanceHistoryUi() {
+    const tbody = document.getElementById("attendanceHistoryTableBody");
+    const countBadge = document.getElementById("attendanceHistoryCount");
+    const infoElem = document.getElementById("attendancePaginationInfo");
+    const prevBtn = document.getElementById("attPrevPageBtn");
+    const nextBtn = document.getElementById("attNextPageBtn");
+
+    if (!tbody) return;
+
+    const filtered = getFilteredAttendanceRecords();
+    const totalFiltered = filtered.length;
+
+    if (countBadge) countBadge.textContent = totalFiltered;
+
+    if (totalFiltered === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 32px;">
+                    <i class="fas fa-calendar-times" style="font-size: 20px; margin-bottom: 8px; display: block; opacity: 0.5;"></i>
+                    No attendance history records found matching criteria.
+                </td>
+            </tr>
+        `;
+        if (infoElem) infoElem.textContent = "Showing 0-0 of 0";
+        if (prevBtn) prevBtn.disabled = true;
+        if (nextBtn) nextBtn.disabled = true;
+        return;
+    }
+
+    // Ensure attendanceCurrentPage is within valid bounds
+    const maxPage = Math.max(0, Math.ceil(totalFiltered / attendancePageSize) - 1);
+    if (attendanceCurrentPage > maxPage) {
+        attendanceCurrentPage = maxPage;
+    }
+
+    const startOffset = attendanceCurrentPage * attendancePageSize;
+    const pageItems = filtered.slice(startOffset, startOffset + attendancePageSize);
+
+    const rowsHtml = pageItems.map(record => {
+        const userName = record.user_name || "Watchman";
+        const tz = record.timezone || "Asia/Dubai";
+        const inTime = record.clock_in_at ? formatAttendanceTime(record.clock_in_at, tz) : "--";
+        const outTime = record.clock_out_at ? formatAttendanceTime(record.clock_out_at, tz) : "--";
+        const workedStr = formatWorkedMinutesString(record.total_worked_minutes);
+
+        let badgeHtml = '<span class="status-badge badge-status-not-started">NOT STARTED</span>';
+        if (record.status === "CLOCKED_IN") {
+            badgeHtml = '<span class="status-badge badge-status-clocked-in"><i class="fas fa-circle" style="font-size: 6px;"></i> ON DUTY</span>';
+        } else if (record.status === "CLOCKED_OUT") {
+            badgeHtml = '<span class="status-badge badge-status-clocked-out">COMPLETED</span>';
+        } else if (record.status === "PENDING_RESOLUTION") {
+            badgeHtml = '<span class="status-badge badge-status-pending-res"><i class="fas fa-exclamation-triangle"></i> RESOLUTION</span>';
+        }
+
+        const devId = record.clock_in_device_id || record.clock_out_device_id || "--";
+        const shiftTimes = (record.scheduled_start_time && record.scheduled_end_time) 
+            ? `${record.scheduled_start_time.substring(0, 5)} - ${record.scheduled_end_time.substring(0, 5)}`
+            : "--";
+
+        return `
+            <tr>
+                <td><span style="font-weight: 600; color: var(--text-primary);">${userName}</span></td>
+                <td><span class="font-mono" style="font-weight: 600;">${record.work_date || '--'}</span></td>
+                <td><span class="font-mono text-secondary" style="font-size: 11.5px;">${shiftTimes}</span></td>
+                <td><span class="font-mono text-secondary" style="font-size: 11.5px;">${inTime}</span></td>
+                <td><span class="font-mono text-secondary" style="font-size: 11.5px;">${outTime}</span></td>
+                <td><span class="font-mono ${record.status === 'CLOCKED_IN' ? 'text-online' : ''}">${workedStr}</span></td>
+                <td>${badgeHtml}</td>
+                <td><span class="font-mono text-muted" style="font-size: 11px;">${devId}</span></td>
+            </tr>
+        `;
+    }).join("");
+
+    tbody.innerHTML = rowsHtml;
+
+    // Update pagination footer
+
+    const startIdx = startOffset + 1;
+    const endIdx = Math.min(startOffset + attendancePageSize, totalFiltered);
+    if (infoElem) infoElem.textContent = `Showing ${startIdx}-${endIdx} of ${totalFiltered}`;
+    if (prevBtn) prevBtn.disabled = attendanceCurrentPage === 0;
+    if (nextBtn) nextBtn.disabled = (attendanceCurrentPage + 1) * attendancePageSize >= totalFiltered;
+}
+
+function handleAttendanceWebSocketEvent(eventData) {
+    console.log("📢 WebSocket ATTENDANCE_EVENT received:", eventData);
+    const eventType = eventData.event;
+    const userName = eventData.user_name || "Watchman";
+    const deviceId = eventData.device_id || "Mobile Device";
+
+    if (eventType === "CLOCK_IN") {
+        showNotification(`🟢 ${userName} Clocked In (${eventData.scheduled_start || ''} - ${eventData.scheduled_end || ''})`, "success");
+        addActivityEvent(
+            deviceId,
+            `${userName} Clocked In on duty`,
+            eventData.clock_in_at || new Date().toISOString(),
+            "attendance",
+            "status-dot-online"
+        );
+    } else if (eventType === "CLOCK_OUT") {
+        const workedStr = formatWorkedMinutesString(eventData.total_worked_minutes);
+        showNotification(`🔴 ${userName} Clocked Out (Total: ${workedStr})`, "info");
+        addActivityEvent(
+            deviceId,
+            `${userName} Clocked Out of shift (Worked: ${workedStr})`,
+            eventData.clock_out_at || new Date().toISOString(),
+            "attendance",
+            "status-dot-inactive"
+        );
+    }
+
+    loadAttendanceData();
+}
+
+function refreshAttendanceAfterReconnect() {
+    console.log("🔄 WebSocket reconnected: synchronizing attendance feeds...");
+    loadAttendanceData();
+}
+
+function filterAttendanceHistoryStatus(status) {
+    attendanceStatusFilter = status;
+    attendanceCurrentPage = 0; // Reset to first page of the filtered set
+    document.querySelectorAll('[id^="attChip"]').forEach(c => c.classList.remove('active'));
+    if (status === 'ALL') document.getElementById('attChipAll')?.classList.add('active');
+    else if (status === 'CLOCKED_IN') document.getElementById('attChipIn')?.classList.add('active');
+    else if (status === 'CLOCKED_OUT') document.getElementById('attChipOut')?.classList.add('active');
+    renderAttendanceHistoryUi();
+}
+
+function applyAttendanceDateFilter() {
+    const s = document.getElementById('attendanceStartDate')?.value;
+    const e = document.getElementById('attendanceEndDate')?.value;
+    attendanceStartDateFilter = s || null;
+    attendanceEndDateFilter = e || null;
+    loadAttendanceHistory();
+}
+
+function clearAttendanceDateFilter() {
+    const s = document.getElementById('attendanceStartDate');
+    const e = document.getElementById('attendanceEndDate');
+    if (s) s.value = '';
+    if (e) e.value = '';
+    attendanceStartDateFilter = null;
+    attendanceEndDateFilter = null;
+    loadAttendanceHistory();
+}
+
+function prevAttendancePage() {
+    if (attendanceCurrentPage > 0) {
+        attendanceCurrentPage--;
+        renderAttendanceHistoryUi();
+    }
+}
+
+function nextAttendancePage() {
+    const filtered = getFilteredAttendanceRecords();
+    if ((attendanceCurrentPage + 1) * attendancePageSize < filtered.length) {
+        attendanceCurrentPage++;
+        renderAttendanceHistoryUi();
+    }
+}
+
+// Export attendance functions to window
+window.loadAttendanceData = loadAttendanceData;
+window.loadTodayAttendance = loadAttendanceData;
+window.loadAttendanceSchedule = fetchAttendanceSchedule;
+window.loadAttendanceHistory = loadAttendanceHistory;
+window.filterAttendanceHistoryStatus = filterAttendanceHistoryStatus;
+window.applyAttendanceDateFilter = applyAttendanceDateFilter;
+window.clearAttendanceDateFilter = clearAttendanceDateFilter;
+window.prevAttendancePage = prevAttendancePage;
+window.nextAttendancePage = nextAttendancePage;
+window.getFilteredAttendanceRecords = getFilteredAttendanceRecords;

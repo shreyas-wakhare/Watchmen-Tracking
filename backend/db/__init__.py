@@ -15,6 +15,8 @@ try:
         AnnouncementReceiptDB,
         User,
         RefreshToken,
+        UserShiftSchedule,
+        AttendanceRecord,
         utc_now,
     )
 except ImportError:
@@ -34,6 +36,8 @@ except ImportError:
         AnnouncementReceiptDB,
         User,
         RefreshToken,
+        UserShiftSchedule,
+        AttendanceRecord,
         utc_now,
     )
 
@@ -58,5 +62,7 @@ __all__ = [
     "AnnouncementReceiptDB",
     "User",
     "RefreshToken",
+    "UserShiftSchedule",
+    "AttendanceRecord",
 ]
 

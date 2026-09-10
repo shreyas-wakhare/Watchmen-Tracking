@@ -45,12 +45,46 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import androidx.lifecycle.lifecycleScope
+import com.google.android.material.button.MaterialButton
 import com.watchmen.tracker.BuildConfig
+import com.watchmen.tracker.attendance.AttendanceApiClient
+import com.watchmen.tracker.attendance.AttendanceManager
+import com.watchmen.tracker.attendance.AttendanceResult
+import com.watchmen.tracker.attendance.ClockInRequest
+import com.watchmen.tracker.attendance.ClockOutRequest
+import com.watchmen.tracker.attendance.TodayAttendanceResponse
+import com.watchmen.tracker.auth.AuthManager
+import com.watchmen.tracker.auth.LoginActivity
 
 class MainActivity : AppCompatActivity() {
     companion object {
         private const val PREF_GUIDE_ACK = "guide_acknowledged"
     }
+
+    // Attendance Views & State
+    private var attendanceStatusDot: View? = null
+    private var tvAttendanceBadge: TextView? = null
+    private var tvScheduledShiftTime: TextView? = null
+    private var llAttendanceActiveContainer: LinearLayout? = null
+    private var tvActualClockInTime: TextView? = null
+    private var tvWorkingTimer: TextView? = null
+    private var llAttendanceCompletedContainer: LinearLayout? = null
+    private var tvWorkedSummary: TextView? = null
+    private var llAttendanceResolutionContainer: LinearLayout? = null
+    private var tvResolutionMessage: TextView? = null
+    private var tvAttendanceError: TextView? = null
+    private var btnAttendanceAction: MaterialButton? = null
+    private var pbAttendanceLoading: ProgressBar? = null
+
+    private var currentAttendanceState: String = "NOT_STARTED"
+    private var activeClockInIso: String? = null
+    private var serverMonotonicOffsetMs: Long = 0L
+    private var timerTickerJob: Job? = null
+    private var isAttendanceActionInProgress = false
+
     private lateinit var statusText: TextView
     private lateinit var btnCheckIn: Button
     private lateinit var btnScanCheckpoint: Button
@@ -140,10 +174,12 @@ class MainActivity : AppCompatActivity() {
             RECEIVER_NOT_EXPORTED
         )
         updateDashboardHeaderAndStatus()
+        refreshAttendanceState()
     }
 
     override fun onPause() {
         super.onPause()
+        stopTimerTicker()
         unregisterReceiver(stateReceiver)
         unregisterReceiver(sentReceiver)
         unregisterReceiver(deliveredReceiver)
@@ -441,6 +477,20 @@ class MainActivity : AppCompatActivity() {
         btnSettings = findViewById(R.id.btnSettings)  // ✅ ADD
         btnAppGuide = findViewById(R.id.btnAppGuide)   // ✅ ADD THIS
 
+        // Attendance Card Views
+        attendanceStatusDot = findViewById(R.id.attendanceStatusDot)
+        tvAttendanceBadge = findViewById(R.id.tvAttendanceBadge)
+        tvScheduledShiftTime = findViewById(R.id.tvScheduledShiftTime)
+        llAttendanceActiveContainer = findViewById(R.id.llAttendanceActiveContainer)
+        tvActualClockInTime = findViewById(R.id.tvActualClockInTime)
+        tvWorkingTimer = findViewById(R.id.tvWorkingTimer)
+        llAttendanceCompletedContainer = findViewById(R.id.llAttendanceCompletedContainer)
+        tvWorkedSummary = findViewById(R.id.tvWorkedSummary)
+        llAttendanceResolutionContainer = findViewById(R.id.llAttendanceResolutionContainer)
+        tvResolutionMessage = findViewById(R.id.tvResolutionMessage)
+        tvAttendanceError = findViewById(R.id.tvAttendanceError)
+        btnAttendanceAction = findViewById(R.id.btnAttendanceAction)
+        pbAttendanceLoading = findViewById(R.id.pbAttendanceLoading)
     }
 
     private fun setupClickListeners() {
@@ -478,12 +528,285 @@ class MainActivity : AppCompatActivity() {
             showSettingsDialog()
         }
 
+        btnAttendanceAction?.setOnClickListener {
+            when (currentAttendanceState) {
+                "NOT_STARTED" -> handleClockIn()
+                "CLOCKED_IN" -> showClockOutConfirmation()
+                else -> refreshAttendanceState()
+            }
+        }
+
         findViewById<View?>(R.id.cardCheckIn)?.setOnClickListener { btnCheckIn.performClick() }
         findViewById<View?>(R.id.cardScanCheckpoint)?.setOnClickListener { btnScanCheckpoint.performClick() }
         findViewById<View?>(R.id.cardIncidentReport)?.setOnClickListener { btnIncidentReport.performClick() }
         findViewById<View?>(R.id.cardAppGuide)?.setOnClickListener { btnAppGuide.performClick() }
         findViewById<View?>(R.id.btnLogout)?.setOnClickListener { showLogoutConfirmation() }
         findViewById<View?>(R.id.userProfilePill)?.setOnClickListener { showSettingsDialog() }
+    }
+
+    // -------------------------------------------------------------
+    // Attendance Lifecycle & State Reconciliation
+    // -------------------------------------------------------------
+
+    private fun refreshAttendanceState() {
+        if (!AuthManager.isLoggedIn(this)) return
+
+        lifecycleScope.launch {
+            pbAttendanceLoading?.visibility = View.VISIBLE
+            tvAttendanceError?.visibility = View.GONE
+
+            when (val result = AttendanceApiClient.getToday()) {
+                is AttendanceResult.Success -> {
+                    pbAttendanceLoading?.visibility = View.GONE
+                    val data = result.data
+                    currentAttendanceState = data.state
+
+                    // Monotonic server clock offset
+                    if (data.serverTime.isNotBlank()) {
+                        serverMonotonicOffsetMs = AttendanceManager.calculateServerOffsetMs(data.serverTime)
+                    }
+
+                    // Idempotency cleanup upon confirmed state
+                    if (data.state == "CLOCKED_IN" || data.state == "CLOCKED_OUT") {
+                        AttendanceManager.clearPendingClockInRequestId(this@MainActivity)
+                    }
+                    if (data.state == "CLOCKED_OUT") {
+                        AttendanceManager.clearPendingClockOutRequestId(this@MainActivity)
+                    }
+
+                    renderAttendanceUi(data)
+                }
+                is AttendanceResult.Error -> {
+                    pbAttendanceLoading?.visibility = View.GONE
+                    if (result.statusCode == 401) {
+                        AuthManager.clearSession(this@MainActivity)
+                        val intent = Intent(this@MainActivity, LoginActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        startActivity(intent)
+                        finish()
+                        return@launch
+                    }
+                    tvAttendanceError?.text = result.message
+                    tvAttendanceError?.visibility = View.VISIBLE
+                }
+            }
+        }
+    }
+
+    private fun renderAttendanceUi(data: TodayAttendanceResponse) {
+        val schedule = data.schedule
+        val attendance = data.attendance
+
+        // 1. Scheduled Shift Time
+        if (schedule != null) {
+            val startFormatted = AttendanceManager.formatWallClock12h(schedule.startTime)
+            val endFormatted = AttendanceManager.formatWallClock12h(schedule.endTime)
+            tvScheduledShiftTime?.text = "Scheduled: $startFormatted — $endFormatted (${schedule.timezone})"
+        } else {
+            tvScheduledShiftTime?.text = "No active shift schedule configured. Please set up schedule."
+        }
+
+        // 2. State-Specific Layout Rendering
+        when (data.state) {
+            "NOT_STARTED" -> {
+                stopTimerTicker()
+                attendanceStatusDot?.setBackgroundResource(R.drawable.bg_status_dot_warning)
+                tvAttendanceBadge?.text = "NOT CLOCKED IN"
+                tvAttendanceBadge?.setTextColor(getColor(R.color.watchmen_warning))
+                tvAttendanceBadge?.setBackgroundResource(R.drawable.bg_status_badge_warning)
+
+                llAttendanceActiveContainer?.visibility = View.GONE
+                llAttendanceCompletedContainer?.visibility = View.GONE
+                llAttendanceResolutionContainer?.visibility = View.GONE
+
+                btnAttendanceAction?.visibility = View.VISIBLE
+                btnAttendanceAction?.isEnabled = true
+                btnAttendanceAction?.text = "CLOCK IN"
+                btnAttendanceAction?.setIconResource(R.drawable.ic_check_in)
+                btnAttendanceAction?.setBackgroundColor(getColor(R.color.watchmen_online))
+            }
+
+            "CLOCKED_IN" -> {
+                attendanceStatusDot?.setBackgroundResource(R.drawable.bg_status_dot_online)
+                tvAttendanceBadge?.text = "CLOCKED IN"
+                tvAttendanceBadge?.setTextColor(getColor(R.color.watchmen_online))
+                tvAttendanceBadge?.setBackgroundResource(R.drawable.bg_status_badge_online)
+
+                llAttendanceActiveContainer?.visibility = View.VISIBLE
+                llAttendanceCompletedContainer?.visibility = View.GONE
+                llAttendanceResolutionContainer?.visibility = View.GONE
+
+                val inFormatted = AttendanceManager.formatTimestamp12h(attendance?.clockInAt, schedule?.timezone ?: "Asia/Dubai")
+                tvActualClockInTime?.text = "Clocked in at $inFormatted"
+                activeClockInIso = attendance?.clockInAt
+
+                startTimerTicker()
+
+                btnAttendanceAction?.visibility = View.VISIBLE
+                btnAttendanceAction?.isEnabled = true
+                btnAttendanceAction?.text = "CLOCK OUT"
+                btnAttendanceAction?.setIconResource(R.drawable.ic_logout)
+                btnAttendanceAction?.setBackgroundColor(getColor(R.color.watchmen_critical))
+            }
+
+            "CLOCKED_OUT" -> {
+                stopTimerTicker()
+                attendanceStatusDot?.setBackgroundResource(R.drawable.bg_status_dot_online)
+                tvAttendanceBadge?.text = "COMPLETED"
+                tvAttendanceBadge?.setTextColor(getColor(R.color.watchmen_online))
+                tvAttendanceBadge?.setBackgroundResource(R.drawable.bg_status_badge_online)
+
+                llAttendanceActiveContainer?.visibility = View.GONE
+                llAttendanceCompletedContainer?.visibility = View.VISIBLE
+                llAttendanceResolutionContainer?.visibility = View.GONE
+
+                val inFormatted = AttendanceManager.formatTimestamp12h(attendance?.clockInAt, schedule?.timezone ?: "Asia/Dubai")
+                val outFormatted = AttendanceManager.formatTimestamp12h(attendance?.clockOutAt, schedule?.timezone ?: "Asia/Dubai")
+                val workedFormatted = AttendanceManager.formatWorkedDuration(attendance?.totalWorkedMinutes)
+                tvWorkedSummary?.text = "Worked: $workedFormatted ($inFormatted – $outFormatted)"
+
+                // Shift completed for today; cannot clock in again per Rule #2
+                btnAttendanceAction?.visibility = View.GONE
+            }
+
+            "PENDING_RESOLUTION" -> {
+                stopTimerTicker()
+                attendanceStatusDot?.setBackgroundResource(R.drawable.bg_status_dot_critical)
+                tvAttendanceBadge?.text = "ACTION REQUIRED"
+                tvAttendanceBadge?.setTextColor(getColor(R.color.watchmen_critical))
+                tvAttendanceBadge?.setBackgroundResource(R.drawable.bg_status_badge_critical)
+
+                llAttendanceActiveContainer?.visibility = View.GONE
+                llAttendanceCompletedContainer?.visibility = View.GONE
+                llAttendanceResolutionContainer?.visibility = View.VISIBLE
+
+                val pastDate = attendance?.workDate ?: "previous shift"
+                tvResolutionMessage?.text = "Shift from $pastDate was left open without Clock Out. Please resolve forgotten clock-out with supervisor."
+
+                btnAttendanceAction?.visibility = View.GONE
+            }
+
+            else -> {
+                stopTimerTicker()
+            }
+        }
+    }
+
+    private fun handleClockIn() {
+        if (isAttendanceActionInProgress) return
+        isAttendanceActionInProgress = true
+        btnAttendanceAction?.isEnabled = false
+        pbAttendanceLoading?.visibility = View.VISIBLE
+        tvAttendanceError?.visibility = View.GONE
+
+        val requestId = AttendanceManager.getOrCreatePendingClockInRequestId(this)
+        val deviceId = getTrackerDeviceId()
+
+        lifecycleScope.launch {
+            val req = ClockInRequest(
+                requestId = requestId,
+                deviceId = deviceId,
+                latitude = null,
+                longitude = null
+            )
+
+            when (val result = AttendanceApiClient.clockIn(req)) {
+                is AttendanceResult.Success -> {
+                    AttendanceManager.clearPendingClockInRequestId(this@MainActivity)
+                    isAttendanceActionInProgress = false
+                    Toast.makeText(this@MainActivity, "Shift started successfully!", Toast.LENGTH_SHORT).show()
+                    ttsHelper.speak("Clock in confirmed. Shift active.", currentLanguage, false)
+                    refreshAttendanceState()
+                }
+                is AttendanceResult.Error -> {
+                    isAttendanceActionInProgress = false
+                    pbAttendanceLoading?.visibility = View.GONE
+                    btnAttendanceAction?.isEnabled = true
+
+                    if (result.statusCode == 409) {
+                        // Conflict: Reconcile server state
+                        refreshAttendanceState()
+                    } else {
+                        tvAttendanceError?.text = result.message
+                        tvAttendanceError?.visibility = View.VISIBLE
+                    }
+                }
+            }
+        }
+    }
+
+    private fun showClockOutConfirmation() {
+        AlertDialog.Builder(this)
+            .setTitle("End Duty Shift")
+            .setMessage("Are you sure you want to Clock Out and complete your duty shift for today?")
+            .setPositiveButton("Clock Out") { _, _ ->
+                handleClockOut()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun handleClockOut() {
+        if (isAttendanceActionInProgress) return
+        isAttendanceActionInProgress = true
+        btnAttendanceAction?.isEnabled = false
+        pbAttendanceLoading?.visibility = View.VISIBLE
+        tvAttendanceError?.visibility = View.GONE
+
+        val requestId = AttendanceManager.getOrCreatePendingClockOutRequestId(this)
+        val deviceId = getTrackerDeviceId()
+
+        lifecycleScope.launch {
+            val req = ClockOutRequest(
+                requestId = requestId,
+                deviceId = deviceId,
+                latitude = null,
+                longitude = null
+            )
+
+            when (val result = AttendanceApiClient.clockOut(req)) {
+                is AttendanceResult.Success -> {
+                    AttendanceManager.clearPendingClockOutRequestId(this@MainActivity)
+                    isAttendanceActionInProgress = false
+                    Toast.makeText(this@MainActivity, "Shift completed successfully!", Toast.LENGTH_SHORT).show()
+                    ttsHelper.speak("Clock out confirmed. Shift completed.", currentLanguage, false)
+                    refreshAttendanceState()
+                }
+                is AttendanceResult.Error -> {
+                    isAttendanceActionInProgress = false
+                    pbAttendanceLoading?.visibility = View.GONE
+                    btnAttendanceAction?.isEnabled = true
+
+                    if (result.statusCode == 409) {
+                        // Conflict: Reconcile server state
+                        refreshAttendanceState()
+                    } else {
+                        tvAttendanceError?.text = result.message
+                        tvAttendanceError?.visibility = View.VISIBLE
+                    }
+                }
+            }
+        }
+    }
+
+    private fun startTimerTicker() {
+        stopTimerTicker()
+        val clockInIso = activeClockInIso ?: return
+        timerTickerJob = lifecycleScope.launch {
+            while (isActive) {
+                val elapsedMs = AttendanceManager.calculateElapsedDutyMs(
+                    clockInAtIso = clockInIso,
+                    serverOffsetMs = serverMonotonicOffsetMs
+                )
+                tvWorkingTimer?.text = AttendanceManager.formatTimerHms(elapsedMs)
+                delay(1000L)
+            }
+        }
+    }
+
+    private fun stopTimerTicker() {
+        timerTickerJob?.cancel()
+        timerTickerJob = null
     }
 
     private fun updateDashboardHeaderAndStatus() {
@@ -1399,10 +1722,11 @@ Time: ${SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())}
     }
 
 
-    // ✅ ADD: Cleanup TTS
+    // ✅ ADD: Cleanup TTS and Attendance ticker
     override fun onDestroy() {
         super.onDestroy()
 
+        stopTimerTicker()
         movementMonitorHandler?.removeCallbacksAndMessages(null)
         movementDetector?.stopMonitoring()
         if (::ttsHelper.isInitialized) {

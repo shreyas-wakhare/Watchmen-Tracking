@@ -95,6 +95,12 @@
                 <!-- Monitoring & Operations Group -->
                 <div class="sidebar-section-title">OPERATIONS</div>
 
+                <div class="menu-item" data-view="attendance" title="Watchman Attendance & Duty Shifts">
+                    <i class="fas fa-user-clock"></i>
+                    <span>Attendance</span>
+                    <span class="menu-badge" id="attendanceBadge" style="display:none">0</span>
+                </div>
+
                 <div class="menu-item" data-view="incidents" title="Incident Reports">
                     <i class="fas fa-exclamation-triangle"></i>
                     <span>Incidents</span>
@@ -497,8 +503,53 @@
                         </div>
                     </div>
 
-                    <!-- Operational Overview — Secondary Split (Recent Activity & Alerts) -->
-                    <div class="overview-secondary-split">
+                    <!-- Operational Overview — Secondary Split (Attendance, Recent Activity & Alerts) -->
+                    <div class="overview-secondary-split has-attendance">
+                        <!-- Attendance & Shift Status Card -->
+                        <div class="saas-card" id="overviewAttendanceCard">
+                            <div class="saas-card-header">
+                                <div class="saas-card-title">
+                                    <i class="fas fa-user-clock" style="color: var(--color-primary);"></i>
+                                    <span>Watchman Attendance</span>
+                                    <span class="status-badge badge-status-not-started" id="ovAttendanceBadge" style="margin-left: 6px;">NOT STARTED</span>
+                                </div>
+                                <a href="javascript:void(0)" class="card-link-action" onclick="switchView('attendance')">
+                                    <span>Details</span>
+                                    <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </div>
+
+                            <div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 12px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div class="attendance-detail-label">ACTIVE SHIFT</div>
+                                        <div class="font-mono" id="ovAttendanceShiftName" style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Day Shift</div>
+                                        <div class="text-muted font-mono" id="ovAttendanceShiftTimes" style="font-size: 11px;">07:00 AM – 07:00 PM</div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div class="attendance-detail-label">DUTY DURATION</div>
+                                        <div class="attendance-live-timer" id="ovAttendanceDuration" style="font-size: 20px;">--:--</div>
+                                    </div>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 8px; border-top: 1px solid var(--border-default);">
+                                    <div>
+                                        <div class="attendance-detail-label">CLOCK IN</div>
+                                        <div class="font-mono text-secondary" id="ovAttendanceClockIn" style="font-size: 11.5px;">--</div>
+                                    </div>
+                                    <div>
+                                        <div class="attendance-detail-label">CLOCK OUT</div>
+                                        <div class="font-mono text-secondary" id="ovAttendanceClockOut" style="font-size: 11.5px;">--</div>
+                                    </div>
+                                </div>
+
+                                <div id="ovAttendanceWarning" class="attendance-warning-banner" style="display: none; margin: 0; padding: 8px 10px; font-size: 11px;">
+                                    <i class="fas fa-exclamation-triangle" style="font-size: 13px;"></i>
+                                    <span>Unresolved shift pending supervisor review.</span>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Recent Activity Timeline -->
                         <div class="saas-card">
                             <div class="saas-card-header">
@@ -1024,6 +1075,255 @@
                                     Distribution</button>
                                 <div class="info-pill" id="statesBox" style="display: block;">Loading state metrics...
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ============================================================
+                     🕒 WATCHMAN ATTENDANCE & SHIFT MANAGEMENT (#view-attendance)
+                     ============================================================ -->
+                <section class="view-container" id="view-attendance">
+                    <div class="page-header-row">
+                        <div>
+                            <h2 class="page-title">Watchman Attendance & Duty Shifts</h2>
+                            <p class="page-subtitle" id="attendanceScopeSubtitle">Real-time shift tracking, duty duration, schedule compliance, and attendance records</p>
+                        </div>
+                        <div class="header-action-cluster">
+                            <button class="btn-saas btn-saas-secondary" id="refreshAttendanceBtn" onclick="loadAttendanceData()">
+                                <i class="fas fa-sync-alt"></i> Refresh Attendance
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 4 Attendance KPI Cards Grid -->
+                    <div class="kpi-grid" style="margin-bottom: 24px;">
+                        <!-- KPI 1: Duty Status -->
+                        <div class="kpi-card">
+                            <div class="kpi-card-top">
+                                <div class="kpi-icon-wrap" id="kpiAttendanceIconWrap" style="background-color: rgba(102, 117, 133, 0.12); color: var(--color-inactive);">
+                                    <i class="fas fa-user-clock" id="kpiAttendanceStatusIcon"></i>
+                                </div>
+                                <span class="kpi-card-title">Duty Status</span>
+                            </div>
+                            <div class="kpi-value font-mono" id="kpiAttendanceStatus">NOT STARTED</div>
+                            <div class="kpi-subtext" id="kpiAttendanceStatusSubtext">
+                                <span class="status-dot" id="kpiAttendanceDot" style="background: var(--color-inactive);"></span>
+                                <span id="kpiAttendanceStatusDesc">No shift started today</span>
+                            </div>
+                        </div>
+
+                        <!-- KPI 2: Worked Duration -->
+                        <div class="kpi-card">
+                            <div class="kpi-card-top">
+                                <div class="kpi-icon-wrap kpi-icon-emerald">
+                                    <i class="fas fa-stopwatch"></i>
+                                </div>
+                                <span class="kpi-card-title">Shift Duration</span>
+                            </div>
+                            <div class="kpi-value text-online font-mono" id="kpiAttendanceDuration">--:--</div>
+                            <div class="kpi-subtext" id="kpiAttendanceDurationSubtext">
+                                <span id="kpiAttendanceDurationDesc">Awaiting shift clock-in</span>
+                            </div>
+                        </div>
+
+                        <!-- KPI 3: Scheduled Shift -->
+                        <div class="kpi-card">
+                            <div class="kpi-card-top">
+                                <div class="kpi-icon-wrap kpi-icon-blue">
+                                    <i class="fas fa-calendar-check"></i>
+                                </div>
+                                <span class="kpi-card-title">Scheduled Shift</span>
+                            </div>
+                            <div class="kpi-value font-mono" id="kpiAttendanceShiftName" style="font-size: 16px;">Day Shift</div>
+                            <div class="kpi-subtext" id="kpiAttendanceShiftTimes">
+                                <span>07:00 AM – 07:00 PM</span>
+                            </div>
+                        </div>
+
+                        <!-- KPI 4: Site Timezone -->
+                        <div class="kpi-card">
+                            <div class="kpi-card-top">
+                                <div class="kpi-icon-wrap" style="background-color: rgba(56, 189, 248, 0.12); color: var(--accent-info);">
+                                    <i class="fas fa-globe-asia"></i>
+                                </div>
+                                <span class="kpi-card-title">Site Time</span>
+                            </div>
+                            <div class="kpi-value font-mono" id="kpiAttendanceSiteTime" style="font-size: 16px;">--:--:--</div>
+                            <div class="kpi-subtext" id="kpiAttendanceTimezone">
+                                <span id="kpiAttendanceTzName">Asia/Dubai (UTC+4)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Split Grid: Today's Shift Session & Configured Schedule -->
+                    <div class="overview-secondary-split" style="margin-bottom: 24px;">
+                        <!-- Left: Active / Today's Shift Card -->
+                        <div class="saas-card" id="todaySessionCard">
+                            <div class="saas-card-header">
+                                <div class="saas-card-title">
+                                    <i class="fas fa-id-badge" style="color: var(--color-primary);"></i>
+                                    <span>Today's Attendance Session</span>
+                                    <span class="status-badge badge-status-not-started" id="todayStatusBadge" style="margin-left: 8px;">NOT STARTED</span>
+                                </div>
+                                <div class="saas-card-actions">
+                                    <span class="font-mono text-muted" id="todayWorkDate" style="font-size: 11px;">--</span>
+                                </div>
+                            </div>
+
+                            <div style="padding: 18px 20px;">
+                                <!-- Pending Resolution Banner (if applicable) -->
+                                <div class="attendance-warning-banner" id="attendancePendingResolutionBanner" style="display: none;">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <div>
+                                        <strong>ATTENTION REQUIRED: Unresolved Prior Shift</strong>
+                                        <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-secondary);">
+                                            An open attendance session from a previous work date was not closed. Clock-in for today remains blocked until this session is closed or resolved by a supervisor.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Session Details Key-Value Grid -->
+                                <div class="attendance-details-grid" id="todaySessionDetails">
+                                    <div class="attendance-detail-item">
+                                        <div class="attendance-detail-label">WATCHMAN / USER</div>
+                                        <div class="attendance-detail-value" id="todayWatchmanName">--</div>
+                                    </div>
+                                    <div class="attendance-detail-item">
+                                        <div class="attendance-detail-label">ACTIVE DEVICE</div>
+                                        <div class="attendance-detail-value font-mono" id="todayDeviceId">--</div>
+                                    </div>
+                                    <div class="attendance-detail-item">
+                                        <div class="attendance-detail-label">CLOCK IN TIME</div>
+                                        <div class="attendance-detail-value font-mono" id="todayClockInTime">--</div>
+                                    </div>
+                                    <div class="attendance-detail-item">
+                                        <div class="attendance-detail-label">CLOCK OUT TIME</div>
+                                        <div class="attendance-detail-value font-mono" id="todayClockOutTime">--</div>
+                                    </div>
+                                    <div class="attendance-detail-item">
+                                        <div class="attendance-detail-label">SCHEDULED WINDOW</div>
+                                        <div class="attendance-detail-value font-mono" id="todayScheduledWindow">--</div>
+                                    </div>
+                                    <div class="attendance-detail-item">
+                                        <div class="attendance-detail-label">DUTY DURATION</div>
+                                        <div class="attendance-detail-value font-mono text-online" id="todayDurationValue">--</div>
+                                    </div>
+                                    <div class="attendance-detail-item" style="grid-column: span 2;">
+                                        <div class="attendance-detail-label">CHECK-IN COORDINATES</div>
+                                        <div class="attendance-detail-value font-mono" id="todayLocationCoords">--</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Configured Recurring Schedule Card -->
+                        <div class="saas-card" id="scheduleInfoCard">
+                            <div class="saas-card-header">
+                                <div class="saas-card-title">
+                                    <i class="fas fa-clock" style="color: var(--accent-info);"></i>
+                                    <span>Active Shift Schedule</span>
+                                    <span class="status-badge badge-online" id="scheduleActiveBadge" style="margin-left: 8px;">Active</span>
+                                </div>
+                            </div>
+                            <div style="padding: 18px 20px;">
+                                <div class="attendance-details-grid">
+                                    <div class="attendance-detail-item">
+                                        <div class="attendance-detail-label">SHIFT NAME</div>
+                                        <div class="attendance-detail-value" id="schedShiftName">Day Shift</div>
+                                    </div>
+                                    <div class="attendance-detail-item">
+                                        <div class="attendance-detail-label">SHIFT TIMING</div>
+                                        <div class="attendance-detail-value font-mono" id="schedShiftTiming">07:00:00 – 19:00:00</div>
+                                    </div>
+                                    <div class="attendance-detail-item">
+                                        <div class="attendance-detail-label">SITE TIMEZONE</div>
+                                        <div class="attendance-detail-value font-mono" id="schedTimezone">Asia/Dubai</div>
+                                    </div>
+                                    <div class="attendance-detail-item">
+                                        <div class="attendance-detail-label">WORKING DAYS</div>
+                                        <div class="attendance-detail-value" id="schedWorkingDays">Mon, Tue, Wed, Thu, Fri, Sat, Sun</div>
+                                    </div>
+                                    <div class="attendance-detail-item" style="grid-column: span 2;">
+                                        <div class="attendance-detail-label">CONTINUOUS DUTY RULE</div>
+                                        <div class="attendance-detail-value text-muted" style="font-size: 11.5px;">
+                                            Enforces exactly 1 continuous duty shift per calendar work date. Server timestamps are authoritative.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Attendance History Table Card -->
+                    <div class="saas-card">
+                        <div class="saas-card-header">
+                            <div class="saas-card-title">
+                                <i class="fas fa-history" style="color: var(--accent-primary);"></i>
+                                <span>Attendance Shift History</span>
+                                <span class="menu-badge" id="attendanceHistoryCount" style="margin-left: 8px;">0</span>
+                            </div>
+                            <div class="saas-card-actions">
+                                <a href="javascript:void(0)" class="card-link-action" onclick="loadAttendanceHistory()">
+                                    <span>Reload</span>
+                                    <i class="fas fa-sync-alt"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Filter Toolbar -->
+                        <div class="filter-toolbar" style="padding: 12px 16px; border-bottom: 1px solid var(--border-default); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
+                            <div class="filter-group" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                <label style="font-size: 11px; color: var(--text-muted); font-weight: 600;">DATE RANGE:</label>
+                                <input type="date" id="attendanceStartDate" class="form-input" style="height: 30px; font-size: 11px;" />
+                                <span style="color: var(--text-muted); font-size: 11px;">to</span>
+                                <input type="date" id="attendanceEndDate" class="form-input" style="height: 30px; font-size: 11px;" />
+                                <button class="btn-saas btn-saas-secondary" style="height: 30px; padding: 0 10px; font-size: 11px;" onclick="applyAttendanceDateFilter()">Filter</button>
+                                <button class="btn-saas btn-saas-secondary" style="height: 30px; padding: 0 10px; font-size: 11px;" onclick="clearAttendanceDateFilter()">Reset</button>
+                            </div>
+
+                            <div class="filter-group" style="display: flex; gap: 6px; align-items: center;">
+                                <div class="filter-chip active" id="attChipAll" onclick="filterAttendanceHistoryStatus('ALL')">All</div>
+                                <div class="filter-chip" id="attChipIn" onclick="filterAttendanceHistoryStatus('CLOCKED_IN')">Active</div>
+                                <div class="filter-chip" id="attChipOut" onclick="filterAttendanceHistoryStatus('CLOCKED_OUT')">Completed</div>
+                            </div>
+                        </div>
+
+                        <!-- History Table -->
+                        <div class="saas-table-container">
+                            <table class="saas-table" id="attendanceHistoryTable">
+                                <thead>
+                                    <tr>
+                                        <th>Watchman / User</th>
+                                        <th>Work Date</th>
+                                        <th>Shift Schedule</th>
+                                        <th>Clock In</th>
+                                        <th>Clock Out</th>
+                                        <th>Duration</th>
+                                        <th>Status</th>
+                                        <th>Device ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendanceHistoryTableBody">
+                                    <tr>
+                                        <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 32px;">
+                                            <i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i> Loading attendance records...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination Footer -->
+                        <div class="table-pagination-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-top: 1px solid var(--border-default);">
+                            <span class="text-muted" style="font-size: 12px;" id="attendancePaginationInfo">Showing 0-0 of 0</span>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn-saas btn-saas-secondary" id="attPrevPageBtn" onclick="prevAttendancePage()" disabled>
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </button>
+                                <button class="btn-saas btn-saas-secondary" id="attNextPageBtn" onclick="nextAttendancePage()" disabled>
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </button>
                             </div>
                         </div>
                     </div>

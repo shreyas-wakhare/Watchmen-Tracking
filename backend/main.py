@@ -117,6 +117,13 @@ except ImportError:
 
 app.include_router(auth_router)
 
+try:
+    from backend.attendance import attendance_router
+except ImportError:
+    from attendance import attendance_router
+
+app.include_router(attendance_router)
+
 
 
 # -------------------- TIME UTILITIES --------------------
